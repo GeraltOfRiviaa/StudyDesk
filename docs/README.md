@@ -344,6 +344,108 @@ To gather information about widgets, update or delete them these endpoints will 
 ## 🗄️ Database Architecture
 The application utilizes a non-relational database structure managed via MongoDB. To maintain high performance and prevent data synchronization issues, collections are strictly decoupled—containers only store UI layouts and filter strings, while cross-widget relationships are isolated in a dedicated links collection.
 
+# Student Dashboard – Data Model
+
+```mermaid
+erDiagram
+    direction LR
+    users ||--o{ notes : "owns"
+    users ||--o{ archive : "owns"
+    users ||--o{ calendar_events : "owns"
+    users ||--o{ forms : "owns"
+    users ||--o{ links : "owns"
+    users ||--o{ containers : "owns"
+    users ||--o{ master_tags : "owns"
+    forms ||--o{ form_responses : "has"
+
+    users {
+        ObjectId _id PK
+        string email UK
+        string password_hash
+        date created_at
+        date updated_at
+    }
+
+    master_tags {
+        ObjectId _id PK
+        ObjectId user_id FK
+        string name
+        string color
+    }
+
+    containers {
+        ObjectId _id PK
+        ObjectId user_id FK
+        string title
+        string type "note|archive|calendar|form"
+        ObjectId[] filter_tags "master_tags"
+        object layout "x, y, w, h"
+    }
+
+    notes {
+        ObjectId _id PK
+        ObjectId user_id FK
+        string title
+        string content "markdown"
+        ObjectId[] tags "master_tags"
+    }
+
+    archive {
+        ObjectId _id PK
+        ObjectId user_id FK
+        string filename
+        string storage_path
+        string mime_type
+        int size
+        ObjectId[] tags "master_tags"
+    }
+
+    calendar_events {
+        ObjectId _id PK
+        ObjectId user_id FK
+        string title
+        string description
+        date start_time
+        date end_time
+        int[] reminders "minutes"
+        ObjectId[] tags "master_tags"
+    }
+
+    forms {
+        ObjectId _id PK
+        ObjectId user_id FK
+        string title
+        object[] fields "question, input_type, correct_answer"
+        ObjectId[] tags "master_tags"
+    }
+
+    form_responses {
+        ObjectId _id PK
+        ObjectId form_id FK
+        ObjectId user_id FK
+        object[] answers
+        number score
+        string result
+        date submitted_at
+    }
+
+    links {
+        ObjectId _id PK
+        ObjectId user_id FK
+        ObjectId item_a_id "polymorphic"
+        string item_a_type
+        ObjectId item_b_id "polymorphic"
+        string item_b_type
+        date created_at
+    }
+```
+
+**Legend**
+- Every collection has `created_at` / `updated_at` (shown only on `users`).
+- Every `user_id` references `users._id`.
+- `tags` / `filter_tags` hold `master_tags._id` values.
+- `links` is polymorphic: `item_*_type` is a collection name, `item_*_id` its `_id`.
+
 ### 👤 Users
 Stores authentication credentials and account settings.
 *   `user_id`: Unique identifier for the account.
@@ -396,7 +498,6 @@ Stores event reminders and scheduled tasks.
 *   `title`: Event title.
 *   `description`: Detailed plaintext notes about the event.
 *   `start_time` / `end_time`: Datetime objects for scheduling.
-*   `reminders`: Array of lead times (in minutes) for notification triggers.
 *   `tags`: Array of tag ObjectIDs assigned to the event.
 *   `created_at` / `updated_at`: Creation and edit timestamps.
 
