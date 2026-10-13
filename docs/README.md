@@ -371,6 +371,8 @@ erDiagram
         ObjectId user_id FK
         string name
         string color
+        date created_at
+        date updated_at
     }
 
     containers {
@@ -380,6 +382,8 @@ erDiagram
         string type "note|archive|calendar|form"
         ObjectId[] filter_tags "master_tags"
         object layout "x, y, w, h"
+        date created_at
+        date updated_at
     }
 
     notes {
@@ -388,6 +392,8 @@ erDiagram
         string title
         string content "markdown"
         ObjectId[] tags "master_tags"
+        date created_at
+        date updated_at
     }
 
     archive {
@@ -398,6 +404,8 @@ erDiagram
         string mime_type
         int size
         ObjectId[] tags "master_tags"
+        date created_at
+        date updated_at
     }
 
     calendar_events {
@@ -409,6 +417,8 @@ erDiagram
         date end_time
         int[] reminders "minutes"
         ObjectId[] tags "master_tags"
+        date created_at
+        date updated_at
     }
 
     forms {
@@ -417,6 +427,8 @@ erDiagram
         string title
         object[] fields "question, input_type, correct_answer"
         ObjectId[] tags "master_tags"
+        date created_at
+        date updated_at
     }
 
     form_responses {
@@ -426,7 +438,7 @@ erDiagram
         object[] answers
         number score
         string result
-        date submitted_at
+        date created_at
     }
 
     links {
