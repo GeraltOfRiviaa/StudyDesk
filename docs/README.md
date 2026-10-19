@@ -139,15 +139,6 @@ Notes are plaintext/markdown documents editable directly in the app. The Note wi
 - Link forms and events in metadata section
 - Attach/select files from Archive
 
-### Data Stored
-- Title
-- Markdown content
-- Tags
-- Linked archive file IDs
-- Container ID
-- Created at / Updated at
-- User ID
-
 ---
 
 ## 🗂️ Archive
@@ -157,15 +148,6 @@ Archive is the file manager widget for storing files and connecting them to note
 ### Actions
 - Upload/download files
 - Link/unlink files to notes
-
-### Data Stored
-- Filename
-- File reference (storage path / MIME type / size)
-- Tags
-- Linked note IDs
-- Container ID
-- Created at / Updated at
-- User ID
 
 ---
 
@@ -178,16 +160,7 @@ Calendar is a widget in which you can display events. Events serve as glorified 
 - Set reminders ahead of time
 - Link notes, forms, and files to an event
 
-### Data Stored
-- Title
-- Start / End time
-- Description
-- Tags
-- Reminders
-- Linked note/form/files IDs
-- Container ID
-- Created at / Updated at
-- User ID
+
 
 ---
 ## 🧪 Form
@@ -198,17 +171,6 @@ Form provides self-testing (quiz/test forms) and structured data-collection form
 - Fill/submit a form and view result/history
 - Link to related notes/calendar events
 
-### Data Stored
-- Title
-- Form fields/questions
-- Responses
-- Results history
-- Tags
-- Linked note/calendar IDs
-- Container ID
-- Created at / Updated at
-- User ID
-
 ---
 
 # ⚙️ Backend Structures
@@ -216,27 +178,12 @@ Form provides self-testing (quiz/test forms) and structured data-collection form
 
 Every widget (Note, Archive, Calendar, Form) is backed by a Container — the part that holds items and lives on the dashboard. The actual data (Note, Archive Item, Event, Form) is stored separately and linked back via Container ID. Type is fixed at creation and never changes.
 
-
-### Data Stored
-- Type (note / archive / calendar / form)
-- Title
-- Created At
-- User ID
-> [!WARNING]
-> Container type is fixed at creation and cannot be changed afterward. Plan container creation accordingly.
-
 ---
 
 # 🔗 Shared Concepts
 **Tags**
 - Used for filtering and linking  
 - Created by users  
-
-**Relations**
-- Notes ↔ Archive files  
-- Notes ↔ Calendar events  
-- Notes ↔ Forms  
-- Forms ↔ Calendar events  
 
 ---
 
@@ -246,8 +193,8 @@ Every widget (Note, Archive, Calendar, Form) is backed by a Container — the pa
 - **One active account per session** (multi‑account switching can be added later)
 - **File uploads stored by the app** (with size limits in v1)
 - **Note content is plaintext/markdown editable in app**
-- **Archive files can be linked to notes**
-- **Calendar supports month/day/event views**
+- **Archive files can be linked to anything**
+- **Calendar supports default and single**
 - **Note and Form support catalog modes**
 - **Note, Archive, and Form support table view**
 - **Container type is set at creation and immutable**
@@ -285,258 +232,12 @@ These checks keep invalid or malicious data out of the system even before the da
 
 Database of my choice is MongoDB because of its non-relational database schema. To access said database I'll use FastAPI for its automatic docs documentation and ease of use.
 
-## Endpoints
-
-To gather information about widgets, update or delete them these endpoints will be used.
-
-### 👤 Users
-
-
-- `POST /users` — create user
-- `GET /users/{user_id}` — get user
-- `PATCH /users/{user_id}` — update user
-- `DELETE /users/{user_id}` — delete user
-- `POST /auth/login` — login
-
----
-
-### ⚙️ Containers
-
-
-- `POST /containers` — create container
-- `GET /containers/{container_id}` — get one container
-- `GET /users/{user_id}/containers` — get all containers for user
-- `PATCH /containers/{container_id}` — update container (title, filterTags)
-- `DELETE /containers/{container_id}` — delete container
-- `DELETE /containers?ids=1,2,3` — bulk delete by ids
-
----
-
-### 🧩 Widgets
-
-`{widget_type}` = notes / forms / archive / calendar-events
-
-
-- `POST /{widget_type}` — create widget
-- `GET /{widget_type}/{widget_id}` — get one widget
-- `GET /{widget_type}?user_id=` — get all of type for user
-- `GET /{widget_type}?tags=math,bio` — get all matching any tag (in group)
-- `GET /{widget_type}?tags=math,bio&match=all` — get all matching exact/all tags
-- `PATCH /{widget_type}/{widget_id}` — update widget
-- `DELETE /{widget_type}/{widget_id}` — delete widget
-- `DELETE /{widget_type}?tags=math,bio` — delete all matching any tag in group
-
----
-
-### 🖋️ Forms
-
-- `POST /forms/{form_id}/responses` — submit a response
-- `GET /forms/{form_id}/responses` — get results/response history
-
-### Links
-
-- `POST /links` — create link between two items
-- `DELETE /links/{link_id}` — delete link
-- `GET /links?item_id=` — get all links for an item
-
----
-
 ## 🗄️ Database Architecture
 The application utilizes a non-relational database structure managed via MongoDB. To maintain high performance and prevent data synchronization issues, collections are strictly decoupled—containers only store UI layouts and filter strings, while cross-widget relationships are isolated in a dedicated links collection.
 
 # Student Dashboard – Data Model
 
-```mermaid
-erDiagram
-    direction LR
-    users ||--o{ notes : "owns"
-    users ||--o{ archive : "owns"
-    users ||--o{ calendar_events : "owns"
-    users ||--o{ forms : "owns"
-    users ||--o{ links : "owns"
-    users ||--o{ containers : "owns"
-    users ||--o{ master_tags : "owns"
-    forms ||--o{ form_responses : "has"
-
-    users {
-        ObjectId _id PK
-        string email UK
-        string password_hash
-        date created_at
-        date updated_at
-    }
-
-    master_tags {
-        ObjectId _id PK
-        ObjectId user_id FK
-        string name
-        string color
-        date created_at
-        date updated_at
-    }
-
-    containers {
-        ObjectId _id PK
-        ObjectId user_id FK
-        string title
-        string type "note|archive|calendar|form"
-        ObjectId[] filter_tags "master_tags"
-        object layout "x, y, w, h"
-        date created_at
-        date updated_at
-    }
-
-    notes {
-        ObjectId _id PK
-        ObjectId user_id FK
-        string title
-        string content "markdown"
-        ObjectId[] tags "master_tags"
-        date created_at
-        date updated_at
-    }
-
-    archive {
-        ObjectId _id PK
-        ObjectId user_id FK
-        string filename
-        string storage_path
-        string mime_type
-        int size
-        ObjectId[] tags "master_tags"
-        date created_at
-        date updated_at
-    }
-
-    calendar_events {
-        ObjectId _id PK
-        ObjectId user_id FK
-        string title
-        string description
-        date start_time
-        date end_time
-        int[] reminders "minutes"
-        ObjectId[] tags "master_tags"
-        date created_at
-        date updated_at
-    }
-
-    forms {
-        ObjectId _id PK
-        ObjectId user_id FK
-        string title
-        object[] fields "question, input_type, correct_answer"
-        ObjectId[] tags "master_tags"
-        date created_at
-        date updated_at
-    }
-
-    form_responses {
-        ObjectId _id PK
-        ObjectId form_id FK
-        ObjectId user_id FK
-        object[] answers
-        number score
-        string result
-        date created_at
-    }
-
-    links {
-        ObjectId _id PK
-        ObjectId user_id FK
-        ObjectId item_a_id "polymorphic"
-        string item_a_type
-        ObjectId item_b_id "polymorphic"
-        string item_b_type
-        date created_at
-    }
-```
-
-**Legend**
-- Every collection has `created_at` / `updated_at` (shown only on `users`).
-- Every `user_id` references `users._id`.
-- `tags` / `filter_tags` hold `master_tags._id` values.
-- `links` is polymorphic: `item_*_type` is a collection name, `item_*_id` its `_id`.
-
-### 👤 Users
-Stores authentication credentials and account settings.
-*   `user_id`: Unique identifier for the account.
-*   `email`: User login address (validated and unique).
-*   `password_hash`: Securely hashed password credential.
-*   `created_at` / `updated_at`: Timestamps tracking account lifecycle.
-
-### ⚙️ Containers
-Lives on the dashboard and represents a saved layout space and filter view.
-*   `container_id`: Unique identifier for the container layout block.
-*   `user_id`: References the owning user account.
-*   `title`: Custom display label set by the user.
-*   `type`: Fixed widget type (note, archive, calendar, or form).
-*   `filter_tags`: Array of tag ObjectIDs used to query items onto the container.
-*   `layout`: Object containing position and sizing parameters { x, y, w, h }.
-*   `created_at` / `updated_at`: Creation and last-modified timestamps.
-
-### 🏷️ Master Tags
-Acts as a global lookup dictionary for UI autocompletion, settings management, and custom badge styling.
-*   `tag_id`: Unique identifier for the tag entry.
-*   `user_id`: Isolates tags to the specific user account.
-*   `name`: Plain text string matching the tag used across widgets.
-*   `color`: Hex code value for visual UI tag badges.
-*   `created_at` / `updated_at`: Creation and last-modified timestamps.
-
-### 📝 Notes
-Stores markdown documents edited directly within the dashboard.
-*   `note_id`: Unique identifier for the note.
-*   `user_id`: References the owning user.
-*   `title`: Plaintext note title.
-*   `content`: Raw Markdown text body.
-*   `tags`: Array of tag ObjectIDs assigned to the note.
-*   `created_at` / `updated_at`: Creation and edit timestamps.
-
-### 🗂️ Archive
-Tracks uploaded files and metadata.
-*   `file_id`: Unique identifier for the archive item.
-*   `user_id`: References the owning user.
-*   `filename`: Original upload file name.
-*   `storage_path`: Internal server path where the file is stored.
-*   `mime_type`: File format classification (JPEG, PNG, PDF).
-*   `size`: File size in bytes.
-*   `tags`: Array of tag ObjectIDs assigned to the file.
-*   `created_at` / `updated_at`: Upload and modification timestamps.
-
-### 🗓️ Calendar Events
-Stores event reminders and scheduled tasks.
-*   `event_id`: Unique identifier for the event.
-*   `user_id`: References the owning user.
-*   `title`: Event title.
-*   `description`: Detailed plaintext notes about the event.
-*   `start_time` / `end_time`: Datetime objects for scheduling.
-*   `tags`: Array of tag ObjectIDs assigned to the event.
-*   `created_at` / `updated_at`: Creation and edit timestamps.
-
-### 🧪 Forms
-Stores self-testing quizzes and data collection forms.
-*   `form_id`: Unique identifier for the form template.
-*   `user_id`: References the owning user.
-*   `title`: Form title.
-*   `fields`: Structured array defining questions, input types, and correct answers.
-*   `tags`: Array of tag ObjectIDs assigned to the form.
-*   `created_at` / `updated_at`: Creation and modification timestamps.
-
-### 📊 Form Responses
-Maintains user submission attempts decoupled from parent forms to prevent document bloat.
-*   `response_id`: Unique identifier for the submission.
-*   `form_id`: References the parent Form document.
-*   `user_id`: References the user who completed the form.
-*   `answers`: Object or array holding the submitted responses.
-*   `score` / `result`: Calculated completion percentage or test result.
-*   `submitted_at`: Submission timestamp.
-
-### 🔗 Links
-Stores explicitly connected cross-widget relations.
-*   `link_id`: Unique identifier for the relation entry.
-*   `user_id`: References the owning user account.
-*   `item_a_id` / `item_a_type`: ID and collection type for the first connected item.
-*   `item_b_id` / `item_b_type`: ID and collection type for the second connected item.
-*   `created_at`: Timestamp when the link was created.
+<img width="3408" height="4848" alt="Database" src="https://github.com/user-attachments/assets/34e65e40-a5b1-4ba2-b277-0bfe8218bc6f" />
+<img width="1626" height="2589" alt="Indexes" src="https://github.com/user-attachments/assets/2fedf194-da38-4475-9483-fefaa7ca9453" />
 
 Samuel Svoboda IT3 SŠPU
