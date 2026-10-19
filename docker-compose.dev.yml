@@ -38,11 +38,52 @@ services:
       - mongodb
 
   mongodb:
-    image: mongodb/mongodb-community-server:8.0-ubi8
+    image: mongodb/mongodb-community-server:latest
+    command: ["--config", "/etc/mongod.conf", "--replSetMember=mongodb:27017"]
     ports:
       - "127.0.0.1:27018:27017"
     volumes:
       - studydesk:/data/db
+      - ./mongod.conf:/etc/mongod.conf:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.hello().isWritablePrimary ? 0 : 1)"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 10s
+
+  mongo-init:
+    image: mongodb/mongodb-community-server:latest
+    restart: "no"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - ./passwordFile:/passwordFile:ro
+    entrypoint:
+      - bash
+      - -c
+      - |
+        mongosh --host mongodb --quiet --eval "
+          const a = db.getSiblingDB('admin');
+          if (!a.getUser('mongotUser')) {
+            a.createUser({ user: 'mongotUser', pwd: '$$(cat /passwordFile)', roles: ['searchCoordinator'] });
+          }
+        "
+
+  mongot:
+    image: mongodb/mongodb-community-search:latest
+    container_name: mongot
+    depends_on:
+      mongo-init:
+        condition: service_completed_successfully
+    ports:
+      - "8080:8080"
+      - "9946:9946"
+    volumes:
+      - mongot-data:/data/mongot
+      - ./mongot.conf:/mongot-community/config.default.yml
+      - ./passwordFile:/passwordFile:ro
 
 volumes:
   studydesk:
