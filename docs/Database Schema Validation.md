@@ -1,4 +1,4 @@
-#database
+
 
 MongoDB `$jsonSchema` validation rules for the StudyDesk application. These validators enforce structural integrity, data types, string length caps, enum constraints, and value bounds directly at the database level as a second layer of defense behind FastAPI/Pydantic.
 
@@ -8,17 +8,7 @@ MongoDB `$jsonSchema` validation rules for the StudyDesk application. These vali
 - **Strict Attribute Control:** All collections enforce `additionalProperties: false` to reject unmapped or malicious fields.
 - **BSON Standard Types:** Types strictly match MongoDB BSON designations.
 
-```table-of-contents
-title: 
-style: nestedList # TOC style (nestedList|nestedOrderedList|inlineFirstLevel)
-minLevel: 0 # Include headings from the specified level
-maxLevel: 0 # Include headings up to the specified level
-include: 
-exclude: 
-includeLinks: true # Make headings clickable
-hideWhenEmpty: false # Hide TOC if no headings are found
-debugInConsole: false # Print debug info in Obsidian console
-```
+
 
 ---
 
