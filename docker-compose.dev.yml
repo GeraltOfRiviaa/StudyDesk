@@ -24,7 +24,7 @@ services:
     command: uvicorn main:app --host 0.0.0.0 --port 80 --reload
     build: ./backend
     ports:
-      - "8000:80"          # check this matches the port in your backend Dockerfile
+      - "8000:80"
     develop:
       watch:
         - action: sync
@@ -33,20 +33,26 @@ services:
         - action: rebuild
           path: ./backend/requirements.txt
     environment:
-      - MONGO_URL=mongodb://mongodb:27017
+      - MONGO_URL=mongodb://mongodb:27017/?directConnection=true
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
 
   mongodb:
     image: mongodb/mongodb-community-server:latest
-    command: ["--config", "/etc/mongod.conf", "--replSetMember=mongodb:27017"]
+    command: ["mongod", "--config", "/etc/mongod.conf"]
     ports:
       - "127.0.0.1:27018:27017"
     volumes:
       - studydesk:/data/db
       - ./mongod.conf:/etc/mongod.conf:ro
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.hello().isWritablePrimary ? 0 : 1)"]
+      test:
+        - CMD
+        - mongosh
+        - --quiet
+        - --eval
+        - "try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongodb:27017'}]}).ok }"
       interval: 5s
       timeout: 10s
       retries: 20
@@ -66,8 +72,8 @@ services:
       - |
         mongosh --host mongodb --quiet --eval "
           const a = db.getSiblingDB('admin');
-          if (!a.getUser('mongotUser')) {
-            a.createUser({ user: 'mongotUser', pwd: '$$(cat /passwordFile)', roles: ['searchCoordinator'] });
+          if (!a.getUser('Myrril')) {
+            a.createUser({ user: 'Myrril', pwd: '$$(cat /passwordFile)', roles: ['searchCoordinator'] });
           }
         "
 
@@ -82,8 +88,9 @@ services:
       - "9946:9946"
     volumes:
       - mongot-data:/data/mongot
-      - ./mongot.conf:/mongot-community/config.default.yml
+      - ./mongot.conf:/mongot-community/config.default.yml:ro
       - ./passwordFile:/passwordFile:ro
 
 volumes:
   studydesk:
+  mongot-data:
