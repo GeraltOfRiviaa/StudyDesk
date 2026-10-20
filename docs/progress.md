@@ -1,5 +1,5 @@
-# 📅 Progress - 10.10. 2026
-## 💾Database - 19.10. 2026
+# 📅 Progress - 19.10. 2026
+## 💾Database and documentation
 So as you may have noticed a few files have been added. It's all just preparation of the dev enviroment. It's not final though and once the database is ready I will add a an initialization for it. While I also did remove the cinations and tasks md since they don't really have to be there. Now for the interesting part, the database is now better with an addition of a few nested collections. I also made some diagrams to pain the picture of how the app will work better, but more are on the way. I should be nearing the end of this endless preperation phase and hopefully get to make some stuff soon, but I still need to finalize the database and probably document my API a bit better at least for myself. 
 
 # 📅 Progress - 10.10. 2026
