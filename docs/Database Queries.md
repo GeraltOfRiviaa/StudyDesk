@@ -1,8 +1,3 @@
-#database 
-
-```table-of-contents
-```
-
 # Queries
 
 A complete list of all the queries that will be in the database at use with variable frequency of use.
