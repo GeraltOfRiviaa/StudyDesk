@@ -1,4 +1,4 @@
-# 🎓 StudyDesk
+# StudyDesk
 
 ## Running the project (dev, Docker Compose Watch)
 
@@ -59,44 +59,23 @@ docker compose -f docker-compose.dev.yml logs -f api
 ## Update
 
 > [!NOTE]
-> **Where to look:** `citations.md` and `progress.md` in the [docs](/docs) folder.
+> **Where to look:**  and `progress.md` in the [docs](/docs) folder.
 
 
-## Story Time
-> [!TIP]
-> This section is a personal backstory on why the project exists. Skip to [Problem](#-problem) for the short version.
 
-As a student who always tried to enhance my study habits I always looked at the internet for the ✨**perfect**✨ study app. For some time I was okay with having simply my handwritten notes in my drawer and testing myself by hiding the words with my hand. I was doing this till I felt prepared for the test ahead. It's nice and simple, but with age came more work. Harder and longer assignments, tests and I needed to *upgrade*. I came upon [RemNote](https://www.remnote.com/). 
+## Problem
+Students use too many disconnected tools (Notion, Google Disk , Google Calendar/ Notion Calendar, RemNote, AnkiCards). They need **one place** to plan, study, and track progress — with items that can **talk to each other**.
 
-> Great app not only for testing yourself but also for storing, categorizing and managing knowledge. 
-
-But then I needed some way to remind myself of tests on certain dates and I also wanted to keep track of what I have to do for school, what chores I had to do, what project tasks I needed done etc. So now I had **Google Calendar** and [Habitica](https://habitica.com/). As I went to study IT I became more interested in enhancing my studying ability's. I wanted to automate everything and I was switching from the holy trinity. It became annoying trying to connect everything into the perfect ecosystem and then still missing the mark in the end. I came close with [Notion](https://www.notion.com/) but there was still something bugging me about it.
-
-> It was so much work to get my ideal digital study space. [Notion](https://www.notion.com/) had a lot of freedom but also so much limitations. It allowed me to do great things when I dig deep. But then I looked back and saw how much time I had to spend just organizing and thinking of my dashboard while making it pretty at the same time. Notion just missed the mark but was so close. 
-
-Now while I was thinking about a final project for my school I was lost. Then my teacher gave me an idea of an app that would be the hub of tools for a student. 
-
->Everything a student needs in one place, one page. Simple, easy to use but handy tools that would make students life just that much easier.
-
-Thats how I thought of 🎉***Students Dashboard***🎉
-
-A web app, that would have the essential tools not only for studying but also for organizing yourself, your work and schedule, tasks and even visualizing your progress in graphs and others stats to keep track of your progress and keep you motivated! The goal is to have everything in one place and connected together. If you make yourself a test, take it a few times then you can add a stats widget and visualize your result to see how you're doing. You have a file you're studying from and don't remember the exact name? Look at the file manager, filter files by tag and then add the one important note onto the dashboard to avoid this petty process again!
-
-The power of this app is that anything you want can be seen right there in one page and you can get anywhere with minimal effort while also making your study space pretty. You have the freedom of not only choosing what things you want to see but also how they should be shown. 
-
-## 🌍 Problem
-Students use too many disconnected tools (notes, files, calendars, forms). They need **one place** to plan, study, and track progress — with widgets that can **talk to each other**.
-
-## ✅ Solution
-A **modular dashboard web app** where students add predefined widgets (Note, Archive, Calendar, Form). Widgets are standardized in size but customizable, and **can connect** to show related data by tags or relations.
+##  Solution
+A **modular dashboard web app** where students add different containers of one item type(Note, Archive, Calendar, Form). Containers are standardized in size but customizable, and **can connect** to show related data by tags or relations.
 
 ---
 
-## ✨ Core Concept
-- 🧩 Dashboard with draggable, resizable widgets  
-- 🧱 Each widget is a reusable component  
-
-- 👤 User accounts keep personal dashboards and data  
+## Core Concept
+-  Dashboard with draggable, resizable, filterable containers
+-  Each container is a reusable component  
+- Items are connected via links which work as a shortcut to related items
+- Tags connect broader themes but can separate items into niche domains
 
 ---
 
@@ -104,104 +83,49 @@ A **modular dashboard web app** where students add predefined widgets (Note, Arc
 > [!NOTE]
 > Everything was done by hand with the use of [shadcn/create Figma community kit](https://www.figma.com/community/file/1342715840824755935/shadcn-ui-components-with-variables-tailwind-classes-updated-september-2026).
 
+<img width="597" height="1280" alt="TabletFinishedTest" src="https://github.com/user-attachments/assets/65bdbba9-f4f6-4eda-9e43-f5a9d2ead8e9" />
+<img width="798" height="1284" alt="TableTest" src="https://github.com/user-attachments/assets/544a262d-23ec-484f-8150-d1131d15578e" />
+<img width="1799" height="1279" alt="PCDashboard" src="https://github.com/user-attachments/assets/3e4881d8-327f-4fcf-afe2-f5a76f9f30f4" />
+<img width="596" height="1284" alt="MobileWidgetTypes" src="https://github.com/user-attachments/assets/eba6fc33-89ad-433d-ab66-507833f86340" />
+<img width="366" height="1281" alt="MobileDashboard" src="https://github.com/user-attachments/assets/45e8a303-4d0c-47d8-8336-3fbe3252c54b" />
+<img width="588" height="1284" alt="CreatingContainer" src="https://github.com/user-attachments/assets/a67ea237-2cb8-4a6a-9998-b4185db83a2e" />
 
-<img width="1544" height="1019" alt="Snímek obrazovky 2026-10-06 214552" src="https://github.com/user-attachments/assets/d78c852b-6c93-4948-a190-2a72d95b7063" />
-
-
----
-
-<img width="1450" height="1205" alt="Snímek obrazovky 2026-10-06 214524" src="https://github.com/user-attachments/assets/0336aa4c-e6d9-41c8-874a-5109f38ec8a8" />
-
----
-
-<img width="1411" height="1007" alt="Snímek obrazovky 2026-10-06 214459" src="https://github.com/user-attachments/assets/f8ed3c02-8ba8-4f5d-8516-da6216e9fca2" />
-
----
-
-<img width="1377" height="1163" alt="Snímek obrazovky 2026-10-06 214451" src="https://github.com/user-attachments/assets/3e329695-6ed4-4c58-a140-8a8ff5681837" />
+# Items 
 
 
----
-
-<img width="1714" height="1199" alt="Snímek obrazovky 2026-10-06 214440" src="https://github.com/user-attachments/assets/43b0d886-3cd9-4f41-a622-491446eb7330" />
-
-
----
-# 🧩 Widgets (Detailed Spec)
-All widgets support changing view and filtering by tag — see Default Actions and Filters basics in progress.md. Actions below only list what's unique to each widget.
-
-## 📝 Note
-### Summary
-Notes are plaintext/markdown documents editable directly in the app. The Note widget can be used as a single note view, catalog view, or table view.
-
-### Actions
-- Write markdown text with pictures, links, and basic formatting
-- Link forms and events in metadata section
-- Attach/select files from Archive
-
----
-
-## 🗂️ Archive
-### Summary
+##  Note
+Notes are markdown documents editable directly in the app
+## Archive
 Archive is the file manager widget for storing files and connecting them to notes. Supported files will be JPEG, PNG, PDF for now
+## Calendar
+Basic calendar where you can create events as in Google Calendar with the ability to repeat events and adding reminders ahead of time.
+## Form
+Forms with multiple types of questions to quiz yourself on your knowledge.
 
-### Actions
-- Upload/download files
-- Link/unlink files to notes
+# Containers
+Every item (Note, Archive, Calendar, Form) is backed by a Container — the part that holds items and lives on the dashboard. The actual data (Note, Archive Item, Event, Form) is stored separately. Every item is has its own ID stored in the container and items are then fetched separately when creating or displaying containers. View is fixed at creation and never changes.
+
+---
+# Views
+Containers can have one of 3 views and every item can be viewed with them(catalogue, table, single). Events are the exception, they can be viewed in a normal calendar view or with a single view, other views are not supported.  The view can be changed when on dashboard. **You cannot change the type of items a container displays after creation of the container**.  
 
 ---
 
-## 🗓️ Calendar
-### Summary
-Calendar is a widget in which you can display events. Events serve as glorified reminders, which funnely enough can have reminders ahead of time, so you don't forget about them. Their speciality is that they support links to notes, forms and files in the archive. Imagine you put a single view event on a dashboard; few days later you open the app and instead of searching for related tests and notes manualy you just open the event and go straight to the material.
-
-### Actions
-- Open and edit event details
-- Set reminders ahead of time
-- Link notes, forms, and files to an event
-
-
-
----
-## 🧪 Form
-### Summary
-Form provides self-testing (quiz/test forms) and structured data-collection forms, with support for table and catalog presentation modes.
-
-### Actions
-- Fill/submit a form and view result/history
-- Link to related notes/calendar events
-
----
-
-# ⚙️ Backend Structures
-**Container**
-
-Every widget (Note, Archive, Calendar, Form) is backed by a Container — the part that holds items and lives on the dashboard. The actual data (Note, Archive Item, Event, Form) is stored separately and linked back via Container ID. Type is fixed at creation and never changes.
-
----
-
-# 🔗 Shared Concepts
-**Tags**
-- Used for filtering and linking  
-- Created by users  
-
----
-
-# ⚙️ Technical Decisions (Current)
+# Technical Decisions
 > [!IMPORTANT]
 > These are current decisions, not final ones — several are still open questions (see progress.md).
 - **One active account per session** (multi‑account switching can be added later)
 - **File uploads stored by the app** (with size limits in v1)
-- **Note content is plaintext/markdown editable in app**
+- **Note content is markdown editable in app**
 - **Archive files can be linked to anything**
-- **Calendar supports default and single**
-- **Note and Form support catalog modes**
-- **Note, Archive, and Form support table view**
+- **Calendar supports calendar and single views** 
+- **Note, Archive, and Form support table, catalogue and single view**
 - **Container type is set at creation and immutable**
 
 ---
 
-# 🧰 Tech Stack
+#  Tech Stack
+
 React + Tailwind  
         ↓  
 FastAPI  
@@ -212,32 +136,34 @@ MongoDB
 
 ---
 
-# 🔒 Input Validation
-Input should be validated before processing and persistence.
+# Input Validation
+Input should be validated before and storing to database via API and MongoDB.
 
-## ✅ General Validation Strategies
+## General Validation Strategies
 - **Schema validation**: strict schemas for each request body; reject unknown fields.
 - **Regex validation**: enforce formats (email, HEX colors, filenames, allowed tag characters).
 - **Length limits**: cap title/tag/description/prompt sizes before insert.
 - **Enum/lookup validation**: verify type/status exists and is active.
 - **Cross‑field rules**: end date after start date, positive time limits, score in range.
 - **File checks**: MIME allowlist, size limits, filename sanitization, store with safe server‑side name.
-- **HTML/JS sanitization**: strip scripts from any user‑generated text rendered in UI.
+- **HTML/JS sanitization**: strip scripts from any user‑generated text rendered in UI, leave only Markdown formatting .
 - **Rate limiting**: block abuse on uploads or repeated requests.
 
 These checks keep invalid or malicious data out of the system even before the database layer.
 
 ---
-# 📖 Database and API
+#  Database and API
+The application utilizes a non-relational database structure managed via MongoDB and accessed via FastAPI. To maintain high performance and prevent data synchronization issues, collections are strictly decoupled—containers only store UI layouts and filter strings, while cross-widget relationships are isolated in a dedicated links collection.
 
-Database of my choice is MongoDB because of its non-relational database schema. To access said database I'll use FastAPI for its automatic docs documentation and ease of use.
+<img width="3408" height="4848" alt="Database" src="https://github.com/user-attachments/assets/db802f8e-6700-4cad-b530-e2a698e90615" />
+<img width="1626" height="2589" alt="Indexes" src="https://github.com/user-attachments/assets/d49cf1cf-a75f-4f37-9266-b25129b18dee" />
 
-## 🗄️ Database Architecture
-The application utilizes a non-relational database structure managed via MongoDB. To maintain high performance and prevent data synchronization issues, collections are strictly decoupled—containers only store UI layouts and filter strings, while cross-widget relationships are isolated in a dedicated links collection.
+
+
 
 # Student Dashboard – Data Model
 
-<img width="3408" height="4848" alt="Database" src="https://github.com/user-attachments/assets/34e65e40-a5b1-4ba2-b277-0bfe8218bc6f" />
-<img width="1626" height="2589" alt="Indexes" src="https://github.com/user-attachments/assets/2fedf194-da38-4475-9483-fefaa7ca9453" />
+
+
 
 Samuel Svoboda IT3 SŠPU
