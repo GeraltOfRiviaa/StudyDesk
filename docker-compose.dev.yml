@@ -39,11 +39,18 @@ services:
         condition: service_healthy
 
   mongodb:
-    image: mongodb/mongodb-community-server:latest
+    image: mongodb/mongodb-community-server:8.0-ubi8
     ports:
       - "127.0.0.1:27018:27017"
     volumes:
       - studydesk:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 10s
+
 
 volumes:
   studydesk:
