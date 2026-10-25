@@ -1,7 +1,7 @@
 from pydantic import Field
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict, EmailStr
-from models.common import Nickname, Password, PyObjectId
+from backend.models.types import Nickname, Password, PyObjectId
 
 
 class UserBase(BaseModel):

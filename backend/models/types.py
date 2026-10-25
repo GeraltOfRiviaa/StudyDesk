@@ -1,4 +1,6 @@
 
+from datetime import datetime
+
 from pydantic import  Field, BeforeValidator,  StringConstraints
 from bson import ObjectId
 from typing import Annotated
@@ -25,6 +27,19 @@ FileName = Annotated[str, StringConstraints(
     strip_whitespace=True,
 )]
 FileSizeLimit = Annotated[int, Field(ge=1, le=MAX_FILE_SIZE)]
+Interval = Annotated[int, Field(ge=1)]
+Description = Annotated[str, Field(min_length=1, max_length=600)]
+Exceptions = list[datetime]
+Reminders = list[int]
+
+class TargetDaysEnum(str, Enum):
+    monday = "monday" 
+    tuesday = "tuesday"
+    wednesday = "wednesday"
+    thursday = "thursday"
+    friday = "friday"
+    sunday = "sunday"
+    saturday = "saturday"      
 
 class TypesEnum(str, Enum):
     note = "note"

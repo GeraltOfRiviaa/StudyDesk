@@ -1,7 +1,7 @@
 from pydantic import Field
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict
-from models.common import  PyObjectId, Tags, Title, TypesEnum
+from backend.models.types import  PyObjectId, Tags, Title, TypesEnum
 
 
 class ContainerLayout(BaseModel):

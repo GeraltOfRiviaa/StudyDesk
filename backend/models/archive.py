@@ -2,7 +2,7 @@
 from datetime import datetime
 from mimetypes import MimeTypes
 from pydantic import BaseModel, ConfigDict, Field
-from models.common import FileName, FileSizeLimit, PyObjectId, StoragePath, Tags, Title
+from backend.models.types import FileName, FileSizeLimit, PyObjectId, StoragePath, Tags, Title
 
 
 class ArchiveBase(BaseModel):

@@ -1,7 +1,7 @@
 
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
-from models.common import PyObjectId, Tags, Title
+from backend.models.types import PyObjectId, Tags, Title
 
 class NoteBase(BaseModel):
     title: Title

@@ -1,7 +1,7 @@
 
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
-from models.common import HexColor, PyObjectId, Tag
+from backend.models.types import HexColor, PyObjectId, Tag
 
 
 class MasterTagsBase(BaseModel):

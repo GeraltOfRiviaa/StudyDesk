@@ -1,6 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
-from models.common import PyObjectId, TypesEnum
+from backend.models.types import PyObjectId, TypesEnum
 
 class LinkBase(BaseModel):
     item_a_id: PyObjectId
