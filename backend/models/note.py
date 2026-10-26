@@ -1,7 +1,6 @@
 
-from datetime import datetime
-from pydantic import BaseModel, ConfigDict, Field
-from backend.models.types import PyObjectId, Tags, Title
+from pydantic import BaseModel, ConfigDict, Field, AwareDatetime
+from models.types import PyObjectId, Tags, Title
 
 class NoteBase(BaseModel):
     title: Title
@@ -20,6 +19,6 @@ class NoteUpdate(BaseModel):
 class NoteDB(NoteBase):
     id: PyObjectId = Field(validation_alias="_id")
     user_id: PyObjectId
-    created_at: datetime
-    updated_at: datetime
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
     

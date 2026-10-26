@@ -1,7 +1,5 @@
-from pydantic import Field
-from datetime import datetime
-from pydantic import BaseModel, ConfigDict, EmailStr
-from backend.models.types import Nickname, Password, PyObjectId
+from pydantic import BaseModel, ConfigDict, EmailStr, AwareDatetime, Field
+from models.types import Nickname, Password, PyObjectId
 
 
 class UserBase(BaseModel):
@@ -21,9 +19,9 @@ class UserUpdate(BaseModel):
 class UserDB(UserBase):
     id: PyObjectId = Field(validation_alias="_id")
     password_hash: str
-    created_at: datetime
-    updated_at: datetime
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
 
 class UserPublic(UserBase):
     id: PyObjectId = Field(validation_alias="_id")
-    created_at: datetime
+    created_at: AwareDatetime

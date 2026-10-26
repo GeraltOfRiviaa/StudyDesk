@@ -1,6 +1,5 @@
-from datetime import datetime
-from pydantic import BaseModel, ConfigDict, Field
-from backend.models.types import PyObjectId, TypesEnum
+from pydantic import BaseModel, ConfigDict, Field, AwareDatetime
+from models.types import PyObjectId, TypesEnum
 
 class LinkBase(BaseModel):
     item_a_id: PyObjectId
@@ -14,5 +13,5 @@ class LinkCreate(LinkBase):
 class LinkDB(LinkBase):
     id: PyObjectId = Field(validation_alias="_id")
     user_id: PyObjectId
-    created_at: datetime
+    created_at: AwareDatetime
     

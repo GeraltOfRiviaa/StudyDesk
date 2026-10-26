@@ -1,7 +1,6 @@
 
-from datetime import datetime
-from pydantic import BaseModel, ConfigDict, Field
-from backend.models.types import HexColor, PyObjectId, Tag
+from pydantic import BaseModel, ConfigDict, Field, AwareDatetime
+from models.types import HexColor, PyObjectId, Tag
 
 
 class MasterTagsBase(BaseModel):
@@ -16,6 +15,6 @@ class MasterTagsUpdate(BaseModel):
 class MasterTagsDB(MasterTagsBase):
     id: PyObjectId = Field(validation_alias="_id")
     user_id: PyObjectId
-    created_at: datetime
-    updated_at: datetime
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
     

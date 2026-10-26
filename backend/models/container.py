@@ -1,7 +1,6 @@
-from pydantic import Field
-from datetime import datetime
-from pydantic import BaseModel, ConfigDict
-from backend.models.types import  PyObjectId, Tags, Title, TypesEnum
+
+from pydantic import BaseModel, ConfigDict, AwareDatetime, Field
+from models.types import  PyObjectId, Tags, Title, TypesEnum
 
 
 class ContainerLayout(BaseModel):
@@ -29,5 +28,5 @@ class ContainerDB(ContainerBase):
     id: PyObjectId = Field(validation_alias="_id")
     user_id: PyObjectId
     type: TypesEnum
-    created_at: datetime
-    updated_at: datetime
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
