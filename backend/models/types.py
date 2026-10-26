@@ -3,7 +3,7 @@ from bson import ObjectId
 from typing import Annotated
 from enum import Enum
 
-MAX_FILE_SIZE = 10458760
+MAX_FILE_SIZE = 10 * 1024 * 1024
 #Pydantic doesn't know how to validate Mongos ObjectId 
 #so we have to validate it ourselves
 def _validate_object_id(v):
@@ -57,10 +57,10 @@ FileName = Annotated[str, StringConstraints(
 FileSizeLimit = Annotated[int, Field(ge=1, le=MAX_FILE_SIZE)]
 Interval = Annotated[int, Field(ge=1)]
 Description = Annotated[str, StringConstraints(min_length=1, max_length=600)]
-Exceptions = Annotated[list[AwareDatetime], Field(default_factory=list)]
-Reminders = Annotated[list[int], Field(default_factory=list, ge=0, le=5)]
-TargetDays = Annotated[list[WeekdayEnum], Field(default_factory=list, ge=0, le=7)]
-Tags = Annotated[list[PyObjectId], Field(default_factory=list, ge=0)]
+Exceptions = Annotated[list[AwareDatetime], Field(default_factory=list, max_length=300)]
+Reminders = Annotated[list[int], Field(default_factory=list, min_length=0, max_length=5)]
+TargetDays = Annotated[list[WeekdayEnum], Field(default_factory=list, min_length=0, max_length=7)]
+Tags = Annotated[list[PyObjectId], Field(default_factory=list, min_length=0, max_length=100)]
 QuestionTitle = Annotated[str, StringConstraints(min_length=1,max_length=300)]
 GenericId = Annotated[str, StringConstraints(min_length=1, max_length=50)]
 TimeToFinish = Annotated[int, Field(ge=1, le=36000)]

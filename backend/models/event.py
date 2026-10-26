@@ -1,9 +1,11 @@
 from pydantic import BaseModel, ConfigDict, Field, AwareDatetime, model_validator
 from models.types import PyObjectId, RepetitionTypesEnum, Interval, TargetDays, Title, Tags, Description, Exceptions, Reminders
 from pydantic_extra_types.timezone_name import TimeZoneName
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 
+
+# check for bugs
 class EventRepetition(BaseModel):
     repetition_type: RepetitionTypesEnum
     interval: Interval = 1
@@ -48,7 +50,7 @@ class EventCreate(EventBase):
     
     @model_validator(mode="after")
     def validate_start_time(self):
-        if self.start_time < datetime.now(timezone.utc):
+        if self.start_time < datetime.now(timezone.utc) + timedelta(seconds=10) :
             raise ValueError("start_time cannot be in the past")
         return self
 
@@ -60,7 +62,7 @@ class EventUpdate(BaseModel):
     description: Description | None = None
     start_time: AwareDatetime | None = None
     end_time: AwareDatetime | None = None
-    timezone: TimeZoneName | None = None
+    event_timezone: TimeZoneName | None = None
     repetition: EventRepetition | None = None
     exceptions: Exceptions | None = None
     reminders: Reminders | None = None
@@ -68,9 +70,16 @@ class EventUpdate(BaseModel):
     
     @model_validator(mode="after")
     def validate_end_time(self):
-        if self.end_time and self.start_time != None:
-            if self.end_time and (self.start_time > self.end_time):
+        if self.end_time and self.start_time is not None:
+            if self.end_time and (self.start_time >= self.end_time):
                 raise ValueError("end_time must be after start_time")
+        return self
+    
+    @model_validator(mode="after")
+    def validate_until(self):
+        if self.repetition and self.repetition.until and self.start_time:
+            if self.repetition.until <= self.start_time:
+                raise ValueError("repetition.until must be after start_time")
         return self
 class EventDB(EventBase):
     id: PyObjectId = Field(validation_alias="_id")
@@ -78,3 +87,4 @@ class EventDB(EventBase):
     created_at: AwareDatetime
     updated_at: AwareDatetime
     
+
