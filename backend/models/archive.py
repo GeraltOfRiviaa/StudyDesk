@@ -1,8 +1,8 @@
 
 from datetime import datetime
 from mimetypes import MimeTypes
-from pydantic import BaseModel, ConfigDict, Field
-from models.types import FileName, FileSizeLimit, PyObjectId, StoragePath, Tags, Title
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from models.types import FileName, FileSizeLimit, PyObjectId, StoragePath, Tags, Title, UpdateModel
 
 
 class ArchiveBase(BaseModel):
@@ -12,8 +12,7 @@ class ArchiveBase(BaseModel):
 class ArchiveCreate(ArchiveBase):
     model_config = ConfigDict(extra="forbid")
     
-class ArchiveUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class ArchiveUpdate(UpdateModel):
     title: Title | None = None
     tags: Tags | None = None
 

@@ -1,6 +1,6 @@
 
-from pydantic import BaseModel, ConfigDict, AwareDatetime, Field
-from models.types import  PyObjectId, Tags, Title, TypesEnum
+from pydantic import BaseModel, ConfigDict, AwareDatetime, Field, model_validator
+from models.types import  PyObjectId, Tags, Title, TypesEnum, UpdateModel
 
 
 class ContainerLayout(BaseModel):
@@ -14,8 +14,7 @@ class ContainerBase(BaseModel):
     filter_tags: Tags = Field(default_factory=list)
     layout: ContainerLayout 
 
-class ContainerUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class ContainerUpdate(UpdateModel):
     title: Title | None
     filter_tags: Tags | None = None
     layout: ContainerLayout | None = None

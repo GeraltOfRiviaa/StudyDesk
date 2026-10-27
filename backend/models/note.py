@@ -1,6 +1,6 @@
 
-from pydantic import BaseModel, ConfigDict, Field, AwareDatetime
-from models.types import PyObjectId, Tags, Title
+from pydantic import BaseModel, ConfigDict, Field, AwareDatetime, model_validator
+from models.types import PyObjectId, Tags, Title, UpdateModel
 
 class NoteBase(BaseModel):
     title: Title
@@ -10,12 +10,10 @@ class NoteBase(BaseModel):
 class NoteCreate(NoteBase):
     model_config = ConfigDict(extra="forbid")
     
-class NoteUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class NoteUpdate(UpdateModel):
     title: Title | None = None
     content: str | None = None
     tags: Tags | None = None
-
 class NoteDB(NoteBase):
     id: PyObjectId = Field(validation_alias="_id")
     user_id: PyObjectId

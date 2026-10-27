@@ -1,31 +1,40 @@
-from pydantic import BaseModel, ConfigDict, AwareDatetime, Field
+from pydantic import BaseModel, ConfigDict, AwareDatetime, Field, model_validator
 from models.types import PyObjectId, GenericId, Score, TimeToFinish
 from typing import Annotated
 
+
 class Answer(BaseModel):
     question_id: GenericId
-    options_id: Annotated[list[GenericId], Field(default_factory=list)]
+    option_ids: Annotated[list[GenericId], Field(min_length=1, max_length=10)]
+
+    #check if the option ids are unique
+    @model_validator(mode="after")
+    def check_option_ids(self):
+        if len(self.option_ids) != len(set(self.option_ids)):
+            raise ValueError("option ids must be unique")
+        return self
 
 class FormResponseBase(BaseModel):
-    form_id: PyObjectId
-    answers: Annotated[list[Answer], Field(default_factory=list)]
-    result: str  | None = None
-    finish_time: TimeToFinish  | None = None
-    
+    answers: Annotated[list[Answer], Field(min_length=1, max_length=500)]
+    time_taken: TimeToFinish | None = None
+
+    #check that each question is present only once
+    @model_validator(mode="after")
+    def check_unique_questions(self):
+        ids = [a.question_id for a in self.answers]
+        if len(ids) != len(set(ids)):
+            raise ValueError("each question can be answered only once")
+        return self
+
+
 class FormResponseCreate(FormResponseBase):
     model_config = ConfigDict(extra="forbid")
 
+
 class FormResponseDB(FormResponseBase):
     id: PyObjectId = Field(validation_alias="_id")
-    score: Score
+    form_id: PyObjectId
     user_id: PyObjectId
+    score: Score
+    result: str | None = None
     created_at: AwareDatetime
-    
-# form_response.py
-# 1. **`form_id` in the body:** it's already in the path of `POST /forms/{form_id}/responses`. A body value can disagree with the path, so drop it from Create and set it server-side.
-# 2. **`result` is client-settable** (it's in Base, so it's in Create), while `score` is correctly server-only. `result` should be server-computed too.
-# 3. **`finish_time`** is client-supplied and unverifiable, so treat it as informational. The name is also unclear (it's a duration, so `time_taken`), and it should be checked against the form's `time_to_finish`.
-# 4. `Answer.options_id` holds a list, so it should be `option_ids`.
-# 5. `answers` has no `max_length` and no duplicate `question_id` check.
-# 6. **Handler-level checks:** the models can't verify that question IDs and option IDs exist in the stored form, or that `single` answers have exactly one option. You'll need to do that in the endpoint.
-# 
