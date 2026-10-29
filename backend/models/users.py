@@ -4,11 +4,10 @@ from models.types import Nickname, Password, PyObjectId, UpdateModel
 
 class UserBase(BaseModel):
     email: EmailStr
-    nickname: Nickname
-    
 
 class UserCreate(UserBase):
     model_config = ConfigDict(extra="forbid")
+    nickname: Nickname
     password: Password
 
 class UserUpdate(UpdateModel):
@@ -26,3 +25,7 @@ class UserDB(UserBase):
 class UserPublic(UserBase):
     id: PyObjectId = Field(validation_alias="_id")
     created_at: AwareDatetime
+    
+class UserLogin(UserModel):
+    model_config = ConfigDict(extra="forbid")
+    password: str = Field(min_length=1, max_length=128)
