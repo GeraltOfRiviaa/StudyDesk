@@ -54,7 +54,11 @@ Data is kept in the `studydesk` volume. Use `down -v` to delete it.
 ### Logs (in a second terminal)
 ```
 docker compose -f docker-compose.dev.yml logs -f api
+
 ```
+
+### Shadcn preset code
+b2C8Rr6hs
 
 ## Update
 

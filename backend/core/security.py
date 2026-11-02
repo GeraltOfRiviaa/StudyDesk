@@ -1,11 +1,14 @@
 from datetime import datetime, timedelta, timezone
+import bcrypt
 from bson import ObjectId
-from fastapi import Cookie, Depends, HTTPException, status
-from jose import JWTError, jwt
+from fastapi import Cookie, HTTPException, status
+from fastapi.concurrency import run_in_threadpool
+from jose import JWTError
+import jwt
 import os
 
-from db import db
-from models.user import UserDB
+from database import db
+from models.users import UserDB, UserCreate
 
 SECRET_KEY = os.environ["JWT_SECRET"]
 ALGORITHM = "HS256"
@@ -31,3 +34,12 @@ async def get_current_user(access_token: str | None = Cookie(default=None)) -> U
     if doc is None:
         raise unauthorized
     return UserDB.model_validate(doc)
+
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+def verify_password(password: str, hashed: str) -> bool:
+    return bcrypt.checkpw(password.encode(), hashed.encode())
+
+DUMMY_HASH = hash_password("dummy-password")
+

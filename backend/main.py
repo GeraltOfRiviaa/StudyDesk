@@ -1,4 +1,11 @@
 from fastapi import FastAPI
-from backend.database import db
+from database import db
+
 
 app = FastAPI()
+
+
+@app.get("/health")
+async def health():
+    await db.command("ping")
+    return {"status": "ok"}
