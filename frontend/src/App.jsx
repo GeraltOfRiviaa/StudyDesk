@@ -7,7 +7,6 @@ import { Home } from './pages/Dashboard'
 
 
 
-
 function App() {
   {/* Use API to get the actual nickname and email of the user */ }
   const nickname = "Myrril"
