@@ -4,7 +4,6 @@ from typing import Annotated
 from enum import Enum
 
 
-
 MAX_FILE_SIZE = 10 * 1024 * 1024
 
 #Pydantic doesn't know how to validate Mongos ObjectId 
@@ -97,3 +96,7 @@ class UpdateModel(BaseModel):
         if not self.model_fields_set:
             raise ValueError("at least one field must be provided")
         return self
+    
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"

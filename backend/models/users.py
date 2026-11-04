@@ -26,6 +26,6 @@ class UserPublic(UserBase):
     id: PyObjectId = Field(validation_alias="_id")
     created_at: AwareDatetime
     
-class UserLogin(UserModel):
+class UserLogin(UserBase):
     model_config = ConfigDict(extra="forbid")
     password: str = Field(min_length=1, max_length=128)
