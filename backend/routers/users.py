@@ -1,54 +1,44 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status 
-from fastapi.concurrency import run_in_threadpool
-from core.limiter import limiter
-from core.security import DUMMY_HASH, EXPIRE_DAYS, create_access_token, hash_password, get_current_user, verify_password
-from models.users import UserCreate,UserDB, UserPublic, UserLogin
-from database import db
+from fastapi import FastAPI, HTTPException, Depends
 from pymongo.errors import DuplicateKeyError
+from database import db
+from core.security import hash_password, verify_password, generate_token
+from models.users import UserCreate, UserPublic,UserLogin
+from models.types import Token
+from fastapi.security import oauth2, OAuth2PasswordRequestForm
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+app = FastAPI()
+users = db["users"]
 
+@app.post("/register", response_model=UserPublic, status_code=201)
+async def register(data: UserCreate):
+    if await users.find_one({"$or": [{"email": data.email}, {"nickname": data.nickname}]}):
+        raise HTTPException(status_code=409, detail="User already exists")
 
-@router.post("/register")
-async def register_user(user: UserCreate):
-    email = user.email.lower()
     now = datetime.now(timezone.utc)
-    hashed = await run_in_threadpool(hash_password, user.password)
+    doc = {
+        "nickname": data.nickname,
+        "email": data.email,
+        "password_hash": hash_password(data.password),
+        "created_at": now,
+        "updated_at": now,
+    }
     try:
-        result = await db.users.insert_one({
-            "email": email,
-            "nickname": user.nickname,
-            "password_hash": hashed,
-            "created_at": now,
-            "updated_at": now,
-        })
-    except DuplicateKeyError:
-        raise HTTPException(status.HTTP_409_CONFLICT, "User already exists")
-    return str(result.inserted_id)
+        result = await users.insert_one(doc)
+    except DuplicateKeyError:  # race condition safety net
+        raise HTTPException(status_code=409, detail="User already exists")
 
-@router.get("/{user_id}", response_model=UserPublic)
-async def get_user(user_id: str, current_user: UserDB = Depends(get_current_user)):
-    if user_id != current_user.id:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "Forbidden")
-    return current_user
+    return {"id": str(result.inserted_id), "nickname": data.nickname, "email": data.email}
 
-@router.post("/login", response_model=UserPublic)
-@limiter.limit("5/minute")
-async def login_user(request: Request, response: Response, data: UserLogin):
-    invalid = HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid credentials")
-
-    doc = await db.users.find_one({"email": data.email.lower()})
-    hash_to_check = doc["password_hash"] if doc else DUMMY_HASH
-
-    ok = await run_in_threadpool(verify_password, data.password, hash_to_check)
-    if not doc or not ok:
-        raise invalid
-
-    token = create_access_token(str(doc["_id"]))
-    response.set_cookie(
-        "access_token", token,
-        httponly=True, secure=True, samesite="lax",
-        max_age=EXPIRE_DAYS * 24 * 60 * 60,
-    )
-    return UserPublic.model_validate(doc)
+@app.post("/login", response_model=Token)
+async def login_user(form: OAuth2PasswordRequestForm = Depends()):
+    '''Login the user with nickname and password'''
+    user = await users.find_one({"nickname": form.username})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if not verify_password(form.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Could not log in the user")
+    
+    return await generate_token(form)
