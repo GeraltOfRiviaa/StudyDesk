@@ -1,13 +1,14 @@
 from datetime import datetime, timezone
 from fastapi import HTTPException, Depends, APIRouter
+from fastapi.security import OAuth2PasswordRequestForm
 from pymongo.errors import DuplicateKeyError
 from database import db
-from core.security import hash_password, generate_token, auth_user, get_current_user
+from core.security import hash_password, generate_token, auth_user
 from models.users import UserCreate, UserPublic
 from models.types import Token
-from fastapi.security import oauth2, OAuth2PasswordRequestForm, OAuth2PasswordBearer
 
-router = APIRouter()
+
+router = APIRouter(prefix="/auth")
 users = db["users"]
 
 
