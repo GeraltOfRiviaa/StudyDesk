@@ -1,31 +1,38 @@
 from datetime import datetime, timedelta, timezone
-
 import bcrypt
-from models.types import Password
+from bson.errors import InvalidId
+from models.types import Password, Nickname
 from database import db
-from models.users import UserDB, UserCreate, UserLogin, UserUpdate
 from bson import ObjectId
 from fastapi import Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordBearer
 import jwt
 from dotenv import load_dotenv
 from os import getenv
-from database import db
-import bcrypt
-from models.types import Password, Nickname
-from bson.errors import InvalidId
+
 
 CREDENTIALS_ERROR = HTTPException(
         status_code=401,
         detail="Invalid credentials",
         headers={"WWW-Authenticate": "Bearer"},
         )
-
+load_dotenv()
 users_collection = db["users"]
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
 
+oauth = OAuth()
+oauth.register(
+    name="google",
+    client_id=getenv('CLIENT_ID'),
+    client_secret=getenv('CLIENT_SECRET'),
+    authorize_url="https://accounts.google.com/o/oauth2/auth",
+    authorize_params={"scope": "openid email profile"},
+    access_token_url="https://oauth2.googleapis.com/token",
+    client_kwargs={"scope": "openid email profile"},
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration"
+)
 
-load_dotenv()
+
 JWT_SECRET = getenv('JWT_SECRET')
 EXPIRE_DAYS = 7
 
@@ -59,7 +66,7 @@ def generate_token(user: dict) -> str:
         "exp": datetime.now(timezone.utc)+ timedelta(minutes=EXPIRE_DAYS * 1440),
     }
     
-    token = jwt.encode(payload, JWT_SECRET,algorithm="HS256")
+    token = jwt.encode(payload,str(JWT_SECRET),algorithm="HS256")
     
     return token
         
@@ -69,8 +76,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     
     try:
         
-        
-        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        payload = jwt.decode(token, str(JWT_SECRET), algorithms=["HS256"])
         sub = payload.get("sub")
         
         if not sub:
