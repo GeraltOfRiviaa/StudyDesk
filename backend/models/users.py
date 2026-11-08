@@ -23,7 +23,8 @@ class UserDB(UserBase):
     updated_at: AwareDatetime
 
 class UserPublic(UserBase):
-    id: PyObjectId = Field(validation_alias="_id")
+    id: PyObjectId
+    nickname: Nickname
     created_at: AwareDatetime
     
 class UserLogin(UserBase):
