@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from os import getenv
 
 
+
 CREDENTIALS_ERROR = HTTPException(
         status_code=401,
         detail="Invalid credentials",
@@ -18,20 +19,7 @@ CREDENTIALS_ERROR = HTTPException(
         )
 load_dotenv()
 users_collection = db["users"]
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl='login')
-
-oauth = OAuth()
-oauth.register(
-    name="google",
-    client_id=getenv('CLIENT_ID'),
-    client_secret=getenv('CLIENT_SECRET'),
-    authorize_url="https://accounts.google.com/o/oauth2/auth",
-    authorize_params={"scope": "openid email profile"},
-    access_token_url="https://oauth2.googleapis.com/token",
-    client_kwargs={"scope": "openid email profile"},
-    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration"
-)
-
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl='auth/login')
 
 JWT_SECRET = getenv('JWT_SECRET')
 EXPIRE_DAYS = 7
