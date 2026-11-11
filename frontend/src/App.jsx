@@ -1,9 +1,13 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { Navbar } from "@/components/Navbar"
+import { Routes, Route } from 'react-router-dom';
 import './App.css'
 import { Settings } from './pages/Settings'
 import { Library } from './pages/Library'
 import { Home } from './pages/Dashboard'
+import { Layout } from './Layout';
+import { Login } from './pages/Login'
+import { Register } from './pages/Register';
+import { RequireToken } from "./Auth";
+
 
 
 
@@ -14,20 +18,16 @@ function App() {
   const email = "temp@email.com"
 
   return (
-    <BrowserRouter>
-    
-      <div className="flex flex-col h-dvh">
-        <Navbar user_nickname={nickname} />
-
-        <main className="flex-1 min-h-0 overflow-y-auto">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/library" element={<Library />} />
-            <Route path="/settings" element={<Settings nickname={nickname} email={email} />} />
-          </Routes>
-        </main>
-      </div>
-    </BrowserRouter>
+      <Routes>
+        <Route element={<Layout email={email} nickname={nickname}/>}>
+          <Route path="/" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/dashboard" element={<RequireToken><Home /></RequireToken>}/>
+          <Route path="/library" element={<RequireToken><Library /></RequireToken>} />
+          <Route path="/settings" element={<RequireToken><Settings nickname={nickname} email={email} /></RequireToken>} />
+        </Route>
+      </Routes>
+      
   )
 }
 
