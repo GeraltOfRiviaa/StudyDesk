@@ -3,6 +3,7 @@ import {
     InputGroup,
     InputGroupInput,
 } from "@/components/ui/input-group"
+import { useOutletContext } from 'react-router-dom';
 
 function Settings({nickname, email}) {
     return (
