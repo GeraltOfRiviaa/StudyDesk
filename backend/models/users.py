@@ -7,12 +7,12 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     model_config = ConfigDict(extra="forbid")
-    nickname: Nickname
+    username: Nickname
     password: Password
 
 class UserUpdate(UpdateModel):
     email: EmailStr | None = None
-    nickname: Nickname | None = None
+    username: Nickname | None = None
     password: Password | None = None
     
     
@@ -24,7 +24,7 @@ class UserDB(UserBase):
 
 class UserPublic(UserBase):
     id: PyObjectId
-    nickname: Nickname
+    username: Nickname
     created_at: AwareDatetime
     
 class UserLogin(UserBase):

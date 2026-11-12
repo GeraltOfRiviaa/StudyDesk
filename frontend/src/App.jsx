@@ -6,7 +6,6 @@ import { Home } from './pages/Dashboard'
 import { Layout } from './Layout';
 import { Login } from './pages/Login'
 import { Register } from './pages/Register';
-import { RequireToken } from "./Auth";
 
 
 
@@ -22,9 +21,9 @@ function App() {
         <Route element={<Layout email={email} nickname={nickname}/>}>
           <Route path="/" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/dashboard" element={<RequireToken><Home /></RequireToken>}/>
-          <Route path="/library" element={<RequireToken><Library /></RequireToken>} />
-          <Route path="/settings" element={<RequireToken><Settings nickname={nickname} email={email} /></RequireToken>} />
+          <Route path="/dashboard" element={<Home />}/>
+          <Route path="/library" element={<Library />} />
+          <Route path="/settings" element={<Settings nickname={nickname} email={email} />} />
         </Route>
       </Routes>
       

@@ -9,6 +9,7 @@ from fastapi.security import OAuth2PasswordBearer
 import jwt
 from dotenv import load_dotenv
 from os import getenv
+from models.users import UserPublic
 
 
 
@@ -59,7 +60,7 @@ def generate_token(user: dict) -> str:
     return token
         
         
-async def get_current_user(token: str = Depends(oauth2_scheme)):
+async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserPublic:
     '''Get current user from the token'''
     
     try:
@@ -79,4 +80,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         raise CREDENTIALS_ERROR
             
     user.pop("password_hash", None)
-    return user
+    
+    response = UserPublic(
+        id=user["_id"], 
+        email=user["email"],
+        nickname=user["nickname"],
+        created_at=user["created_at"])
+    
+    return response

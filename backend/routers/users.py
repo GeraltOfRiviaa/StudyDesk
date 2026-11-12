@@ -3,7 +3,7 @@ from fastapi import HTTPException, Depends, APIRouter, Request, Cookie, Query
 from fastapi.security import OAuth2PasswordRequestForm
 from pymongo.errors import DuplicateKeyError
 from database import db
-from core.security import hash_password, generate_token, auth_user
+from core.security import hash_password, generate_token, auth_user, get_current_user
 from models.users import UserCreate, UserPublic
 from models.types import Token
 from urllib.parse import urlencode
@@ -26,12 +26,12 @@ FRONTEND_URL = "http://localhost:5173"
 @router.post("/register", response_model=UserPublic, status_code=201)
 async def register(data: UserCreate):
     '''Register the user with email, nickname and password'''
-    if await users.find_one({"$or": [{"email": data.email}, {"nickname": data.nickname}]}):
+    if await users.find_one({"$or": [{"email": data.email}, {"nickname": data.username}]}):
         raise HTTPException(status_code=409, detail="User already exists")
 
     now = datetime.now(timezone.utc)
     doc = {
-        "nickname": data.nickname,
+        "nickname": data.username,
         "email": data.email,
         "password_hash": hash_password(data.password),
         "created_at": now,
@@ -43,7 +43,7 @@ async def register(data: UserCreate):
         raise HTTPException(status_code=409, detail="User already exists")
     response = UserPublic(
         id=str(result.inserted_id),
-        nickname=data.nickname, 
+        username=data.username, 
         email=data.email,
         created_at=now
     )
@@ -178,3 +178,7 @@ async def google_callback(
     )
     response.delete_cookie("oauth_state")  # state is single-use
     return response
+
+@router.get("/user", response_model=UserPublic)
+async def get_user(token: str):
+    return await get_current_user(token=token)
