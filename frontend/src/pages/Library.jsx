@@ -11,7 +11,7 @@ function Library() {
     
 
     return (
-        <div className="flex flex-col min-h-full mx-auto pt-5 px-4 gap-7 md:max-w-200 lg:max-w-250">
+        <div className="flex flex-col min-h-full pt-5 mx-auto px-4 gap-7 md:max-w-200 lg:max-w-250">
             <div className="mx-auto">
                 <h1 className="font-bold text-4xl">Library</h1>
             </div>
