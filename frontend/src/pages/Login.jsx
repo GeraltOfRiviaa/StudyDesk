@@ -19,24 +19,18 @@ function Login() {
     const navigate = useNavigate();
     const [showPassword, setShowPassword] = useState(false);
 
-    function onSubmit(data) {
-        login(data)
-    }
-
-
-
     const form = useForm({
         resolver: zodResolver(LoginSchema),
         defaultValues: { username: "", password: "" },
     })
 
-
     const register = () => {
         navigate('/register')
     }
-    //check to see if the fields are not empty
-    const login = async (data) => {
 
+
+    async function onSubmit(data) {
+        
         const API_OPTIONS = {
             method: "POST",
             body: new URLSearchParams({ username: data.username, password: data.password })
@@ -60,7 +54,7 @@ function Login() {
                 type: "error"
             })
         }
-    };
+    }
 
 
 
@@ -128,8 +122,8 @@ function Login() {
                 />
 
                 <div className="flex flex-row justify-between mt-4 ">
-                    <Button variant="default" size="lg" className="rounded-md" render={<button type="submit" />}>Login</Button>
-                    <Button variant="destructive" size="lg" className="rounded-md" onClick={register} render={<button type="button" />}>Register</Button>
+                    <Button variant="default" size="lg" className="rounded-md" type="submit">Login</Button>
+                    <Button variant="destructive" size="lg" className="rounded-md" onClick={register} type="button">Register</Button>
                 </div>
             </form>
             <form id="login-tablet-pc" className="flex-col max-w-100 mx-auto my-auto hidden sm:flex lg:max-w-150 ">
@@ -192,8 +186,8 @@ function Login() {
                     )}
                 />
                 <div className="flex flex-row justify-between mt-4 ">
-                    <Button variant="default" size="lg" className="rounded-md" render={<button type="submit" />}>Login</Button>
-                    <Button variant="destructive" size="lg" className="rounded-md" onClick={register} render={<button type="button" />}>Register</Button>
+                    <Button variant="default" size="lg" className="rounded-md" type="submit">Login</Button>
+                    <Button variant="destructive" size="lg" className="rounded-md" onClick={register} type="button">Register</Button>
                 </div>
             </form>
         </div>
