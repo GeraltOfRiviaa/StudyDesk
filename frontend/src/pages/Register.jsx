@@ -20,55 +20,46 @@ function Register() {
     const navigate = useNavigate();
     const [showPassword, setShowPassword] = useState(false);
 
-
-
-    function onSubmit(data) {
-        register(data)
-    }
-
     const form = useForm({
         resolver: zodResolver(RegisterSchema),
         defaultValues: { username: "", email: "", password: "" },
     })
 
-    //check to see if the fields are not empty
-    const register = async (data) => {
-        const API_OPTIONS = {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                email: data.email,
-                username: data.username,
-                password: data.password
-            })
-        }
-        console.log("clicked")
-
-        try {
-            const response = await fetch(register_url, API_OPTIONS)
-            if (!response.ok) {
-                toast.add({
-                    title: "Could not register a user",
-                    type: "error"
-                })
-                return
-            }
-            navigate('/')
-        } catch (err) {
-            console.log('Error when registering' + err)
-            toast.add({
-                title: "Could not register user a user",
-                description: err,
-                type: "error"
-            }) // add actual error message toast, for now it doesn nothing
-        }
-
-    };
-
     const login = () => {
         navigate('/')
     }
 
+    async function onSubmit(data) {
+            const API_OPTIONS = {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: data.email,
+                    username: data.username,
+                    password: data.password
+                })
+            }
+            console.log("clicked")
+
+            try {
+                const response = await fetch(register_url, API_OPTIONS)
+                if (!response.ok) {
+                    toast.add({
+                        title: "Could not register a user",
+                        type: "error"
+                    })
+                    return
+                }
+                navigate('/')
+            } catch (err) {
+                console.log('Error when registering' + err)
+                toast.add({
+                    title: "Could not register user a user",
+                    description: err,
+                    type: "error"
+                })
+            }
+        };
     return (
         <div className="flex h-dvh" onSubmit={form.handleSubmit(onSubmit)}>
             <Toaster />
@@ -85,7 +76,7 @@ function Register() {
                                     {...field}
                                     placeholder="SmartBoy"
                                     autoComplete="username"
-                                    aria-invalid={fieldState.invalid} 
+                                    aria-invalid={fieldState.invalid}
                                 />
                             </InputGroup>
                             {fieldState.invalid && (
@@ -105,7 +96,7 @@ function Register() {
                                     {...field}
                                     placeholder="smartboy@example.com"
                                     autoComplete="email"
-                                    aria-invalid={fieldState.invalid} 
+                                    aria-invalid={fieldState.invalid}
                                 />
                             </InputGroup>
                             {fieldState.invalid && (
@@ -127,7 +118,7 @@ function Register() {
                                     placeholder="..."
                                     type={showPassword ? "text" : "password"}
                                     autoComplete="current-password"
-                                    aria-invalid={fieldState.invalid} 
+                                    aria-invalid={fieldState.invalid}
                                 />
 
                                 {/* Toggle button for showing/hiding password */}
@@ -153,8 +144,8 @@ function Register() {
 
 
                 <div className="flex flex-row justify-between mt-4 ">
-                    <Button variant="default" size="lg" className="rounded-md" onClick={register} render={<button type="submit" />}>Register</Button>
-                    <Button variant="secondary" size="lg" className="rounded-md" onClick={login} render={<button type="button" />}>Login</Button>
+                    <Button variant="default" size="lg" className="rounded-md" type="submit">Register</Button>
+                    <Button variant="secondary" size="lg" className="rounded-md" onClick={login} type="button">Login</Button>
                 </div>
             </form>
             <form id="login-tablet-pc" className="flex-col max-w-100 mx-auto my-auto hidden sm:flex ">
@@ -170,7 +161,7 @@ function Register() {
                                     {...field}
                                     placeholder="SmartBoy"
                                     autoComplete="username"
-                                    aria-invalid={fieldState.invalid} 
+                                    aria-invalid={fieldState.invalid}
                                 />
                             </InputGroup>
                             {fieldState.invalid && (
@@ -190,7 +181,7 @@ function Register() {
                                     {...field}
                                     placeholder="smartboy@example.com"
                                     autoComplete="email"
-                                    aria-invalid={fieldState.invalid} 
+                                    aria-invalid={fieldState.invalid}
                                 />
                             </InputGroup>
                             {fieldState.invalid && (
@@ -211,7 +202,7 @@ function Register() {
                                     placeholder="verySecretPassword"
                                     type={showPassword ? "text" : "password"}
                                     autoComplete="current-password"
-                                    aria-invalid={fieldState.invalid} 
+                                    aria-invalid={fieldState.invalid}
                                 />
 
                                 {/* Toggle button for showing/hiding password */}
@@ -235,8 +226,8 @@ function Register() {
                     )} />
 
                 <div className="flex flex-row justify-between mt-4 ">
-                    <Button variant="default" size="lg" className="rounded-md" render={<button type="submit" />}>Register</Button>
-                    <Button variant="secondary" size="lg" className="rounded-md" onClick={login} render={<button type="button" />}>Login</Button>
+                    <Button variant="default" size="lg" className="rounded-md" type="submit">Register</Button>
+                    <Button variant="secondary" size="lg" className="rounded-md" onClick={login} type="button">Login</Button>
                 </div>
             </form>
         </div>
