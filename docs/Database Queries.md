@@ -5,7 +5,7 @@ A complete list of all the queries that will be in the database at use with vari
 
 - **F1** Find a user by their email (used when logging in, and to check an email isn't already taken)
 - **F2** Find a user by their ID
-- **F3** Find user by their nickname
+- **F3** Find user by their username
 - **A1** Create a new user
 - **C1** Change user details
 

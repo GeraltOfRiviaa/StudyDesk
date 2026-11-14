@@ -4,8 +4,8 @@ import {
   AvatarFallback,
 } from "@/components/ui/avatar"
 
-export function AvatarWithBadge({nickname}) {
-  const avatar_name = nickname.slice(0,2).toUpperCase()
+export function AvatarWithBadge({username}) {
+  const avatar_name = username.slice(0,2).toUpperCase()
   return (
     <Avatar>
       <AvatarFallback>

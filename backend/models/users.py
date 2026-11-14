@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict, EmailStr, AwareDatetime, Field, model_validator
-from models.types import Nickname, Password, PyObjectId, UpdateModel
+from models.types import Username, Password, PyObjectId, UpdateModel
 
 
 class UserBase(BaseModel):
@@ -7,15 +7,16 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     model_config = ConfigDict(extra="forbid")
-    nickname: Nickname
+    username: Username
     password: Password
 
 class UserUpdate(UpdateModel):
     email: EmailStr | None = None
-    nickname: Nickname | None = None
-    password: Password | None = None
-    
-    
+    username: Username | None = None
+
+class UserChangePassword(UpdateModel):
+    old_password: Password
+    new_password: Password
 class UserDB(UserBase):
     id: PyObjectId = Field(validation_alias="_id")
     password_hash: str
@@ -23,9 +24,10 @@ class UserDB(UserBase):
     updated_at: AwareDatetime
 
 class UserPublic(UserBase):
-    id: PyObjectId = Field(validation_alias="_id")
+    id: PyObjectId
+    username: Username
     created_at: AwareDatetime
     
-class UserLogin(UserModel):
+class UserLogin(UserBase):
     model_config = ConfigDict(extra="forbid")
     password: str = Field(min_length=1, max_length=128)

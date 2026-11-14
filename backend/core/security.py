@@ -1,45 +1,91 @@
 from datetime import datetime, timedelta, timezone
 import bcrypt
-from bson import ObjectId
-from fastapi import Cookie, HTTPException, status
-from fastapi.concurrency import run_in_threadpool
-from jose import JWTError
-import jwt
-import os
-
+from bson.errors import InvalidId
+from models.types import Password, Username
 from database import db
-from models.users import UserDB, UserCreate
+from bson import ObjectId
+from fastapi import Cookie, Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
+import jwt
+from dotenv import load_dotenv
+from os import getenv
+from models.users import UserPublic
 
-SECRET_KEY = os.environ["JWT_SECRET"]
-ALGORITHM = "HS256"
+
+
+CREDENTIALS_ERROR = HTTPException(
+        status_code=401,
+        detail="Invalid credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+        )
+load_dotenv()
+users_collection = db["users"]
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl='auth/login')
+
+JWT_SECRET = getenv('JWT_SECRET')
 EXPIRE_DAYS = 7
 
-def create_access_token(user_id: str) -> str:
-    exp = datetime.now(timezone.utc) + timedelta(days=EXPIRE_DAYS)
-    return jwt.encode({"sub": user_id, "exp": exp}, SECRET_KEY, algorithm=ALGORITHM)
 
-async def get_current_user(access_token: str | None = Cookie(default=None)) -> UserDB:
-    unauthorized = HTTPException(status.HTTP_401_UNAUTHORIZED, "Not authenticated")
-    if not access_token:
-        raise unauthorized
-    try:
-        payload = jwt.decode(access_token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id = payload.get("sub")
-    except JWTError:
-        raise unauthorized
-    if not user_id or not ObjectId.is_valid(user_id):
-        raise unauthorized
-
-    doc = await db.users.find_one({"_id": ObjectId(user_id)})
-    if doc is None:
-        raise unauthorized
-    return UserDB.model_validate(doc)
-
-def hash_password(password: str) -> str:
+def hash_password(password: Password) -> str:
+    '''Hash the password with bcrypt'''
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
-def verify_password(password: str, hashed: str) -> bool:
+def verify_password(password: Password, hashed: str) -> bool:
+    '''Verify if the str password provided matches with the hashed password'''
     return bcrypt.checkpw(password.encode(), hashed.encode())
 
-DUMMY_HASH = hash_password("dummy-password")
+async def auth_user(username: Username, password: Password):
+    '''Authenticate users based on email and password'''
+    user = await users_collection.find_one({"username" : username})
+    
+    if not user:
+        return False
+    if not verify_password(password=password, hashed=user["password_hash"]):
+        return False
+    
+    return user
 
+
+def generate_token(user: dict) -> str:
+    '''Generate OAuth2 token with username and password'''
+
+    payload = {
+        "sub": str(user["_id"]),
+        "username": user["username"],
+        "exp": datetime.now(timezone.utc)+ timedelta(minutes=EXPIRE_DAYS * 1440),
+    }
+    
+    token = jwt.encode(payload,str(JWT_SECRET),algorithm="HS256")
+    
+    return token
+        
+        
+async def get_current_user(access_token: str | None = Cookie(default=None)) -> UserPublic:
+    '''Get current user from the token'''
+    if not access_token:
+        raise CREDENTIALS_ERROR
+    try:
+        
+        payload = jwt.decode(access_token, str(JWT_SECRET), algorithms=["HS256"])
+        sub = payload.get("sub")
+        
+        if not sub:
+            raise CREDENTIALS_ERROR
+        
+        user = await users_collection.find_one({"_id": ObjectId(sub)})
+        print("user:", user)
+    except (jwt.InvalidTokenError, InvalidId):
+        raise CREDENTIALS_ERROR
+    
+    if not user:
+        raise CREDENTIALS_ERROR
+            
+    user.pop("password_hash", None)
+    
+    response = UserPublic(
+        id=user["_id"], 
+        email=user["email"],
+        username=user["username"],
+        created_at=user["created_at"])
+    
+    return response

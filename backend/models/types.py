@@ -4,7 +4,6 @@ from typing import Annotated
 from enum import Enum
 
 
-
 MAX_FILE_SIZE = 10 * 1024 * 1024
 
 #Pydantic doesn't know how to validate Mongos ObjectId 
@@ -51,7 +50,7 @@ class QuestionInputTypeEnum(str, Enum):
     true_false = "true_false"
 
 PyObjectId = Annotated[str, BeforeValidator(_validate_object_id)]
-Nickname = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_.-]{3,50}$")]
+Username = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_.-]{3,50}$")]
 Password = Annotated[str, StringConstraints(min_length=8, max_length=128)]
 Tag = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
 HexColor = Annotated[str, StringConstraints(pattern=r"^#[0-9a-fA-F]{6}$")]
@@ -97,3 +96,10 @@ class UpdateModel(BaseModel):
         if not self.model_fields_set:
             raise ValueError("at least one field must be provided")
         return self
+    
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+class TokenData(BaseModel):
+    username: str | None = None
