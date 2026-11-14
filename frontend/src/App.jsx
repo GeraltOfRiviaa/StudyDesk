@@ -6,6 +6,7 @@ import { Home } from './pages/Dashboard'
 import { Layout } from './Layout';
 import { Login } from './pages/Login'
 import { Register } from './pages/Register';
+import { ChangePassword } from './ChangePassword';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Route path="/dashboard" element={<Home />}/>
           <Route path="/library" element={<Library />} />
           <Route path="/settings" element={<Settings/>} />
+          <Route path="/settings/change/password" element={<ChangePassword/>} />
         </Route>
       </Routes>
       

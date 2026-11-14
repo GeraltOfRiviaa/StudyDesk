@@ -1,29 +1,29 @@
-// auth.jsx
-import { createContext, useContext, useEffect, useState } from "react"
+// AuthProvider.jsx  (only the component)
+import { useCallback, useEffect, useState } from "react"
 import { api } from "@/api"
 import { AuthContext } from "./AuthContext"
 
 export function AuthProvider({ children }) {
-        const [user, setUser] = useState(null)
-        const [loading, setLoading] = useState(true)
+    const [user, setUser] = useState(null)
+    /*Starts true so pages know the check hasn't finished yet*/
+    const [loading, setLoading] = useState(true)
 
-        useEffect(() => {
-            api("/auth/user")
-                .then(u => setUser({
-                    id: u.id,
-                    email: u.email,
-                    username: u.username,
-                    created_at: u.created_at,
-                }))
-                .catch(() => setUser(null))
-                .finally(() => setLoading(false))
-        }, [])
+    /*Call this any time the user changes (login, update)*/
+    const refreshUser = useCallback(async () => {
+        try {
+            setUser(await api("/auth/user"))
+        } catch {
+            setUser(null)
+        } finally {
+            setLoading(false)
+        }
+    }, [])
 
-        return (
-            <AuthContext.Provider value={{ user, setUser, loading }}>
-                {children}
-            </AuthContext.Provider>
-        )
+    useEffect(() => { refreshUser() }, [refreshUser])
 
+    return (
+        <AuthContext.Provider value={{ user, setUser, loading, refreshUser }}>
+            {children}
+        </AuthContext.Provider>
+    )
 }
-

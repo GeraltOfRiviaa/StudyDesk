@@ -1,10 +1,10 @@
 from datetime import datetime, timedelta, timezone
 import bcrypt
 from bson.errors import InvalidId
-from models.types import Password, Nickname
+from models.types import Password, Username
 from database import db
 from bson import ObjectId
-from fastapi import Depends, HTTPException
+from fastapi import Cookie, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 import jwt
 from dotenv import load_dotenv
@@ -34,9 +34,9 @@ def verify_password(password: Password, hashed: str) -> bool:
     '''Verify if the str password provided matches with the hashed password'''
     return bcrypt.checkpw(password.encode(), hashed.encode())
 
-async def auth_user(nickname: Nickname, password: Password):
+async def auth_user(username: Username, password: Password):
     '''Authenticate users based on email and password'''
-    user = await users_collection.find_one({"nickname" : nickname})
+    user = await users_collection.find_one({"username" : username})
     
     if not user:
         return False
@@ -51,7 +51,7 @@ def generate_token(user: dict) -> str:
 
     payload = {
         "sub": str(user["_id"]),
-        "nickname": user["nickname"],
+        "username": user["username"],
         "exp": datetime.now(timezone.utc)+ timedelta(minutes=EXPIRE_DAYS * 1440),
     }
     
@@ -60,20 +60,20 @@ def generate_token(user: dict) -> str:
     return token
         
         
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserPublic:
+async def get_current_user(access_token: str | None = Cookie(default=None)) -> UserPublic:
     '''Get current user from the token'''
-    if not token:
+    if not access_token:
         raise CREDENTIALS_ERROR
     try:
         
-        payload = jwt.decode(token, str(JWT_SECRET), algorithms=["HS256"])
+        payload = jwt.decode(access_token, str(JWT_SECRET), algorithms=["HS256"])
         sub = payload.get("sub")
         
         if not sub:
             raise CREDENTIALS_ERROR
         
         user = await users_collection.find_one({"_id": ObjectId(sub)})
-        
+        print("user:", user)
     except (jwt.InvalidTokenError, InvalidId):
         raise CREDENTIALS_ERROR
     
@@ -85,7 +85,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserPublic:
     response = UserPublic(
         id=user["_id"], 
         email=user["email"],
-        username=user["nickname"],
+        username=user["username"],
         created_at=user["created_at"])
     
     return response

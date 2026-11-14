@@ -90,12 +90,12 @@ function Navbar() {
                 </Button>
             </div>
 
-            {/* Desktop right: nickname + avatar (hidden on mobile) */}
+            {/* Desktop right: username + avatar (hidden on mobile) */}
             <div className="hidden md:flex min-w-0 flex-row gap-2.5 items-center justify-end">
 
                 {!loading ? <p className="...">Hello {user_username}!</p> : <Spinner />}
                 <DropdownMenu>
-                    <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="rounded-full shrink-0" type="button"><AvatarWithBadge nickname={user_username}></AvatarWithBadge></Button>} />
+                    <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="rounded-full shrink-0" type="button"><AvatarWithBadge username={user_username}></AvatarWithBadge></Button>} />
                     <DropdownMenuContent className="w-32">
                         <DropdownMenuGroup>
                             <DropdownMenuItem className="text-destructive" onClick={logout}>

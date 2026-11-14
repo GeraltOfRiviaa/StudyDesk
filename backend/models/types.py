@@ -50,7 +50,7 @@ class QuestionInputTypeEnum(str, Enum):
     true_false = "true_false"
 
 PyObjectId = Annotated[str, BeforeValidator(_validate_object_id)]
-Nickname = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_.-]{3,50}$")]
+Username = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_.-]{3,50}$")]
 Password = Annotated[str, StringConstraints(min_length=8, max_length=128)]
 Tag = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
 HexColor = Annotated[str, StringConstraints(pattern=r"^#[0-9a-fA-F]{6}$")]
