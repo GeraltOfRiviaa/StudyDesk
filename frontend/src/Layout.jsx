@@ -10,7 +10,7 @@ const Layout = () => {
   if (!user) return <Navigate to="/" replace />
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen my-2 mx-2">
       <header>
         <Navbar/>
       </header>

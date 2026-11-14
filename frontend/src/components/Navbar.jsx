@@ -31,7 +31,7 @@ function Navbar() {
 
     return (
 
-        <header className="flex justify-between items-center md:grid md:grid-cols-[1fr_auto_1fr] h-fit min-h-12.5 mx-4 border-2 p-2 rounded-md bg-card md:mt-4">
+        <header className="flex justify-between items-center md:grid md:grid-cols-[1fr_auto_1fr] h-fit min-h-12.5  border-2 p-2 rounded-md bg-card">
             {/* Left: logo */}
             <div className="min-w-0">
                 <Button variant="ghost" size="sm" render={<button type="button" />}>
