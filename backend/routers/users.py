@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from fastapi import HTTPException, Depends, APIRouter, Request, Cookie, Query
+from fastapi import HTTPException, Depends, APIRouter, Request, Cookie, Query, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from pymongo.errors import DuplicateKeyError
 from database import db
@@ -11,6 +11,7 @@ from fastapi.responses import RedirectResponse
 import secrets
 from httpx import AsyncClient
 import os
+import re
 
 
 router = APIRouter(prefix="/auth")
@@ -20,8 +21,18 @@ GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
 USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
 REDIRECT_URI = "http://localhost:8000/auth/google/callback"  # must match Google Console exactly
-FRONTEND_URL = "http://localhost:5173"
+FRONTEND_URL = "http://localhost:5173/dashboard"
 
+
+@router.post("/logout")
+async def logout(response: Response):
+    response.delete_cookie(
+        key="access_token",
+        httponly=True,
+        samesite="lax",
+        secure=False,  # must match how it was set; True in production
+    )
+    return {"ok": True}
 
 @router.post("/register", response_model=UserPublic, status_code=201)
 async def register(data: UserCreate):
@@ -50,18 +61,27 @@ async def register(data: UserCreate):
 
     return response
 
-@router.post("/login", response_model=Token)
-async def login_user(form: OAuth2PasswordRequestForm = Depends()):
+@router.post("/login")
+async def login_user(response: Response, form: OAuth2PasswordRequestForm = Depends()):
     '''Login the user with username and password and generate a token'''
     user = await auth_user(form.username, form.password)
     if not user:
         raise HTTPException(status_code=401, detail="Could not log in the user")
-    return Token(access_token=generate_token(user))
+    token = generate_token(user)
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        samesite="lax",
+        secure=False,  # True in production
+        max_age=60 * 60 * 24 * 7,
+    )
+    return {"ok": True}  # no token in the body
 
 
 # Step 1: send the user to Google's consent screen
 @router.get("/google/login")
-async def google_login():
+def google_login():
     state = secrets.token_urlsafe(32)  # random CSRF token
 
     params = {
@@ -137,32 +157,30 @@ async def google_callback(
     email = info.get("email")
     name = info.get("name") or (email.split("@")[0] if email else "user")
 
-    # Never trust an unverified email (it could be used to hijack an existing account)
     if not email or not info.get("email_verified"):
         raise HTTPException(400, "Google email not verified")
 
-    # Step 5: find or create the user in our DB
-    now = datetime.now(timezone.utc)
-    user = users.find_one({"email": email})
+    user = await users.find_one({"email": email})
 
     if not user:
-        user = await users.find_one({"nickname": name})
-        if user:
-            nickname = f"{name}_{secrets.token_hex(3)}"
-
-            doc = {
-                "nickname": nickname,
-                "email": email,
-                "password_hash": None,  # Google-only account has no password
-                "created_at": now,
-                "updated_at": now,
-            }
-            try:
-                result = await users.insert_one(doc)
-            except DuplicateKeyError:  # race condition safety net
-                raise HTTPException(409, "User already exists")
-            doc["_id"] = result.inserted_id
-            user = doc
+        base = re.sub(r"[^A-Za-z0-9_.-]", "", name) or "user"
+        nickname = base
+        if await users.find_one({"nickname": nickname}):
+            nickname = f"{base}_{secrets.token_hex(3)}"
+        now = datetime.now(timezone.utc)
+        doc = {
+            "nickname": nickname,
+            "email": email,
+            "password_hash": None,
+            "created_at": now,
+            "updated_at": now,
+        }
+        try:
+            result = await users.insert_one(doc)
+        except DuplicateKeyError:
+            raise HTTPException(409, "User already exists")
+        doc["_id"] = result.inserted_id
+        user = doc
 
     # Step 6: issue OUR OWN token, same function your normal login uses
     jwt_token = generate_token(user=user)
@@ -180,5 +198,7 @@ async def google_callback(
     return response
 
 @router.get("/user", response_model=UserPublic)
-async def get_user(token: str):
-    return await get_current_user(token=token)
+async def get_user(access_token: str | None = Cookie(default=None)):
+    if not access_token:
+        raise HTTPException(401, "Not authenticated")
+    return await get_current_user(token=access_token)

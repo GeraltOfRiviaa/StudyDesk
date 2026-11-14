@@ -62,7 +62,8 @@ def generate_token(user: dict) -> str:
         
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserPublic:
     '''Get current user from the token'''
-    
+    if not token:
+        raise CREDENTIALS_ERROR
     try:
         
         payload = jwt.decode(token, str(JWT_SECRET), algorithms=["HS256"])
@@ -84,7 +85,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserPublic:
     response = UserPublic(
         id=user["_id"], 
         email=user["email"],
-        nickname=user["nickname"],
+        username=user["nickname"],
         created_at=user["created_at"])
     
     return response

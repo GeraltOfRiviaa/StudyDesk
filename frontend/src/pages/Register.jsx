@@ -60,6 +60,8 @@ function Register() {
                 })
             }
         };
+
+    
     return (
         <div className="flex h-dvh" onSubmit={form.handleSubmit(onSubmit)}>
             <Toaster />

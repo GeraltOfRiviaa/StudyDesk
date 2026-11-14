@@ -1,17 +1,21 @@
-
+import { Navigate, Outlet } from 'react-router-dom'
 import { Navbar } from './components/Navbar'
-import { Outlet } from 'react-router-dom'
 import { Toaster } from "@/components/ui/toast"
+import { useUser } from '@/AuthContext'
 
-const Layout = ({ email, nickname }) => {
+const Layout = () => {
+  const { user, loading } = useUser()
+
+  if (loading) return <div className="h-screen grid place-items-center w-screen">Loading...</div>
+  if (!user) return <Navigate to="/" replace />
 
   return (
     <div className="flex flex-col h-screen">
       <header>
-        <Navbar user_nickname={nickname} />
+        <Navbar/>
       </header>
       <main className="flex-1">
-        <Outlet context={email} />
+        <Outlet />
         <Toaster />
       </main>
     </div>

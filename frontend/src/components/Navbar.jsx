@@ -10,16 +10,27 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom"
+import { useEffect, useState } from "react"
+import { useUser } from "@/AuthContext"
+import { Spinner } from "./ui/spinner";
+import { api } from '@/api'
 
-function Navbar({ user_nickname }) {
 
+function Navbar() {
+    const { setUser } = useUser()
+    const { user, loading } = useUser()
     const navigate = useNavigate()
-    const logout = () => {
-        localStorage.clear()
+    const logout = async () => {
+        await api("/auth/logout", { method: "POST" })
+        setUser(null)
         navigate("/")
     }
 
+    const user_username = user?.username ?? ""
+    
+
     return (
+
         <header className="flex justify-between items-center md:grid md:grid-cols-[1fr_auto_1fr] h-fit min-h-12.5 mx-4 border-2 p-2 rounded-md bg-card md:mt-4">
             {/* Left: logo */}
             <div className="min-w-0">
@@ -81,9 +92,10 @@ function Navbar({ user_nickname }) {
 
             {/* Desktop right: nickname + avatar (hidden on mobile) */}
             <div className="hidden md:flex min-w-0 flex-row gap-2.5 items-center justify-end">
-                <p className="text-md truncate min-w-0 max-w-50">Hello {user_nickname}!</p>
+
+                {!loading ? <p className="...">Hello {user_username}!</p> : <Spinner />}
                 <DropdownMenu>
-                    <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="rounded-full shrink-0" render={<button type="button" />}><AvatarWithBadge nickname={user_nickname}></AvatarWithBadge></Button>} />
+                    <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="rounded-full shrink-0" type="button"><AvatarWithBadge nickname={user_username}></AvatarWithBadge></Button>} />
                     <DropdownMenuContent className="w-32">
                         <DropdownMenuGroup>
                             <DropdownMenuItem className="text-destructive" onClick={logout}>
@@ -95,7 +107,7 @@ function Navbar({ user_nickname }) {
             </div>
 
         </header>
-    );
+    )
 }
 
 export { Navbar };
