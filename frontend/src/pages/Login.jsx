@@ -47,7 +47,7 @@ function Login() {
             <Toaster />
             <form
                 onSubmit={form.handleSubmit(onSubmit)}
-                className="flex flex-col mx-auto my-auto w-screen px-20 max-w-100 sm:px-0 lg:max-w-150"
+                className="flex flex-col mx-auto my-auto w-screen px-20 max-w-100 sm:px-0 lg:max-w-80"
             >
                 <h1 className="font-bold text-4xl text-center py-10">Login</h1>
 
@@ -56,7 +56,7 @@ function Login() {
                     control={form.control}
                     render={({ field, fieldState }) => (
                         <div className={rowClass}>
-                            <p className="font-semibold text-xl">Username</p>
+                            <label className="font-semibold text-xl">Username</label>
                             <InputGroup className="sm:max-w-70">
                                 <InputGroupInput
                                     {...field}
@@ -77,7 +77,7 @@ function Login() {
                     control={form.control}
                     render={({ field, fieldState }) => (
                         <div className={rowClass}>
-                            <p className="font-semibold text-xl">Password</p>
+                            <label className="font-semibold text-xl">Password</label>
                             <InputGroup className="sm:max-w-70">
                                 <InputGroupInput
                                     {...field}
@@ -105,10 +105,10 @@ function Login() {
                 />
 
                 <div className="flex flex-row justify-between mt-4">
-                    <Button type="submit" variant="default" size="lg" className="rounded-md">
+                    <Button type="submit" variant="default" size="sm" className="rounded-md">
                         Login
                     </Button>
-                    <Button type="button" variant="outline" size="lg" className="rounded-md" onClick={() => navigate("/register")}>
+                    <Button type="button" variant="outline" size="sm" className="rounded-md" onClick={() => navigate("/register")}>
                         Register
                     </Button>
                 </div>

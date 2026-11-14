@@ -48,7 +48,7 @@ function Register() {
                     control={form.control}
                     render={({ field, fieldState }) => (
                         <div className={rowClass}>
-                            <p className="font-semibold text-xl">Username</p>
+                            <label className="font-semibold text-xl">Username</label>
                             <InputGroup className="sm:max-w-70">
                                 <InputGroupInput
                                     {...field}
@@ -69,7 +69,7 @@ function Register() {
                     control={form.control}
                     render={({ field, fieldState }) => (
                         <div className={rowClass}>
-                            <p className="font-semibold text-xl">Email</p>
+                            <label className="font-semibold text-xl">Email</label>
                             <InputGroup className="sm:max-w-70">
                                 <InputGroupInput
                                     {...field}
@@ -90,7 +90,7 @@ function Register() {
                     control={form.control}
                     render={({ field, fieldState }) => (
                         <div className={rowClass}>
-                            <p className="font-semibold text-xl">Password</p>
+                            <label className="font-semibold text-xl">Password</label>
                             <InputGroup className="sm:max-w-70">
                                 <InputGroupInput
                                     {...field}
@@ -118,10 +118,10 @@ function Register() {
                 />
 
                 <div className="flex flex-row justify-between mt-4">
-                    <Button type="submit" variant="default" size="lg" className="rounded-md">
+                    <Button type="submit" variant="default" size="sm" className="rounded-md">
                         Register
                     </Button>
-                    <Button type="button" variant="secondary" size="lg" className="rounded-md" onClick={() => navigate("/")}>
+                    <Button type="button" variant="secondary" size="sm" className="rounded-md" onClick={() => navigate("/")}>
                         Login
                     </Button>
                 </div>
