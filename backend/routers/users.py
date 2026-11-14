@@ -1,10 +1,11 @@
 from datetime import datetime, timezone
+from bson import ObjectId
 from fastapi import HTTPException, Depends, APIRouter, Request, Cookie, Query, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from pymongo.errors import DuplicateKeyError
 from database import db
-from core.security import hash_password, generate_token, auth_user, get_current_user
-from models.users import UserCreate, UserPublic
+from core.security import hash_password, generate_token, auth_user, get_current_user, verify_password
+from models.users import UserChangePassword, UserCreate, UserPublic, UserUpdate
 from models.types import Token
 from urllib.parse import urlencode
 from fastapi.responses import RedirectResponse
@@ -36,13 +37,13 @@ async def logout(response: Response):
 
 @router.post("/register", response_model=UserPublic, status_code=201)
 async def register(data: UserCreate):
-    '''Register the user with email, nickname and password'''
-    if await users.find_one({"$or": [{"email": data.email}, {"nickname": data.username}]}):
+    '''Register the user with email, username and password'''
+    if await users.find_one({"$or": [{"email": data.email}, {"username": data.username}]}):
         raise HTTPException(status_code=409, detail="User already exists")
 
     now = datetime.now(timezone.utc)
     doc = {
-        "nickname": data.username,
+        "username": data.username,
         "email": data.email,
         "password_hash": hash_password(data.password),
         "created_at": now,
@@ -78,7 +79,34 @@ async def login_user(response: Response, form: OAuth2PasswordRequestForm = Depen
     )
     return {"ok": True}  # no token in the body
 
+@router.patch("/user/update")
+async def update_user(update: UserUpdate, user=Depends(get_current_user)):
+    changes = {}
+    if update.username:
+        changes["username"] = update.username
+    if update.email:
+        changes["email"] = update.email
 
+    if not changes:
+        raise HTTPException(400, "Nothing to update")
+
+    dupes = [{c: changes[c]} for c in ("username", "email") if c in changes]
+    # If there is any change recorded in "changes" in either "username" or "email" keys, write them into "dupes"
+    # dupes = {
+    #   "username": "changed"
+    #   "email": "changed"
+    #}
+    uid = ObjectId(user.id)  # works whether user.id is a str or an ObjectId
+
+    if dupes and await users.find_one({"$or": dupes, "_id": {"$ne": uid}}):
+        raise HTTPException(409, "Username or email already taken")
+    
+    changes["updated_at"] = datetime.now(timezone.utc)
+    result = await users.update_one({"_id": uid}, {"$set": changes})
+    if result.matched_count == 0:
+        raise HTTPException(404, "User not found")
+
+    return {"ok": True}
 # Step 1: send the user to Google's consent screen
 @router.get("/google/login")
 def google_login():
@@ -104,6 +132,36 @@ def google_login():
     )
     return response
 
+@router.patch("/user/password")   # 1. new path, /user/update is already taken
+async def change_password(data: UserChangePassword ,user=Depends(get_current_user)):   # 2. async + Depends(get_current_user)
+    # 1. get the old and new password (from a Pydantic model)
+    old = data.old_password
+    new = data.new_password
+    # 2. load the user's password_hash from the DB
+    id = ObjectId(user.id)
+    doc = await users.find_one({"_id": id})
+    if not doc or not doc.get("password_hash"):
+        raise HTTPException(status_code=404)
+    # 3. verify the old password, raise error if it doesn't match
+    if not verify_password(old, doc["password_hash"]):
+        raise HTTPException(status_code=400)
+    # 4. hash the new password
+    new_hash = hash_password(new)
+    
+    if new_hash == doc["password_hash"]:
+        raise HTTPException(status_code=400)
+    # 5. save it in the DB         
+    result = await users.update_one(
+        {"_id": id},
+        {"$set": {
+            "password_hash": new_hash,
+            "updated_at": datetime.now(timezone.utc),
+        }},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(404, "User not found")
+    # 6. return {"ok": True}
+    return {"ok": True}
 
 # Step 2: Google redirects back here with ?code=...&state=...
 @router.get("/google/callback")
@@ -164,12 +222,12 @@ async def google_callback(
 
     if not user:
         base = re.sub(r"[^A-Za-z0-9_.-]", "", name) or "user"
-        nickname = base
-        if await users.find_one({"nickname": nickname}):
-            nickname = f"{base}_{secrets.token_hex(3)}"
+        username = base
+        if await users.find_one({"username": username}):
+            username = f"{base}_{secrets.token_hex(3)}"
         now = datetime.now(timezone.utc)
         doc = {
-            "nickname": nickname,
+            "username": username,
             "email": email,
             "password_hash": None,
             "created_at": now,
@@ -198,7 +256,5 @@ async def google_callback(
     return response
 
 @router.get("/user", response_model=UserPublic)
-async def get_user(access_token: str | None = Cookie(default=None)):
-    if not access_token:
-        raise HTTPException(401, "Not authenticated")
-    return await get_current_user(token=access_token)
+async def get_user(user=Depends(get_current_user)):
+    return user
