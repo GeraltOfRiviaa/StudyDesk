@@ -2,7 +2,7 @@ import * as z from "zod"
 
 export const UsernameField = z
     .string()
-    .min(5, "Username must be at least 5 characters.")
+    .min(3, "Username must be at least 3 characters.")
     .max(50, "Username must be at most 50 characters.")
     .regex(/^[A-Za-z0-9_.-]+$/, "Only letters, numbers, underscores, dots and hyphens.")
 

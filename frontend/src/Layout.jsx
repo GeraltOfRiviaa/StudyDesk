@@ -2,6 +2,7 @@ import { Navigate, Outlet } from 'react-router-dom'
 import { Navbar } from './components/Navbar'
 import { Toaster } from "@/components/ui/toast"
 import { useUser } from '@/AuthContext'
+import { ThemeProvider } from "@/components/ThemeProvider"
 
 const Layout = () => {
   const { user, loading } = useUser()
@@ -10,15 +11,17 @@ const Layout = () => {
   if (!user) return <Navigate to="/" replace />
 
   return (
-    <div className="flex flex-col h-screen my-2 mx-2">
-      <header>
-        <Navbar/>
-      </header>
-      <main className="flex-1">
-        <Outlet />
-        <Toaster />
-      </main>
-    </div>
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <div className="flex flex-col h-screen my-2 mx-2">
+        <header>
+          <Navbar />
+        </header>
+        <main className="flex-1">
+          <Outlet />
+          <Toaster />
+        </main>
+      </div>
+    </ThemeProvider>
   )
 }
 

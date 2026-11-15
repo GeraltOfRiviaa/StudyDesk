@@ -14,6 +14,7 @@ import { useEffect, useState } from "react"
 import { useUser } from "@/AuthContext"
 import { Spinner } from "./ui/spinner";
 import { api } from '@/api'
+import {ModeToggle} from '@/components/ThemeToggle'
 
 
 function Navbar() {
@@ -46,6 +47,7 @@ function Navbar() {
 
             {/* Mobile menu (hidden on md+) */}
             <div className="flex flex-row gap-2.5 items-center md:hidden">
+                <ModeToggle/>
                 <DropdownMenu>
                     <DropdownMenuTrigger render={<Button variant="default" size="sm" className="rounded-lg px-2" render={<button type="button" />}> <Menu /> </Button>} />
                     <DropdownMenuContent>
@@ -92,7 +94,7 @@ function Navbar() {
 
             {/* Desktop right: username + avatar (hidden on mobile) */}
             <div className="hidden md:flex min-w-0 flex-row gap-2.5 items-center justify-end">
-
+                <ModeToggle/>
                 {!loading ? <p className="...">Hello {user_username}!</p> : <Spinner />}
                 <DropdownMenu>
                     <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="rounded-full shrink-0" type="button"><AvatarWithBadge username={user_username}></AvatarWithBadge></Button>} />
