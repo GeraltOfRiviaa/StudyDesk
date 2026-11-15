@@ -83,6 +83,8 @@ async def filtered_list_notes(
     match: Literal["none", "any", "all", "exact"] | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     skip: Annotated[int, Query(ge=0)] = 0,
+    sort: Literal["updated_at", "created_at", "title", "tags"] = "updated_at",
+    order: Literal["asc", "desc"] = "desc",
     user: UserPublic = Depends(get_current_user),
 ):
     query: dict[str, Any] = {"user_id": ObjectId(user.id)}
@@ -115,14 +117,15 @@ async def filtered_list_notes(
     if q:
         query["title"] = {"$regex": re.escape(q), "$options": "i"}
     
-    
+    direction = 1 if order == "asc" else -1
     docs = await (
         notes_collection.find(query)
-            .sort("updated_at", -1)
+            .collation({"locale": "en"})
+            .sort([(sort, direction), ("_id", direction)])
             .skip(skip)
             .limit(limit)
             .to_list(length=limit)
-        )
+    )
         
     return [to_note(d) for d in docs]
 

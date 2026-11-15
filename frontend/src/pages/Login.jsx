@@ -24,7 +24,6 @@ function Login() {
         try {
             await api("/auth/login", {
                 method: "POST",
-                /*FastAPI's OAuth2PasswordRequestForm expects form data, not JSON*/
                 body: new URLSearchParams({ username: data.username, password: data.password }),
             })
             /*Load the user before navigating, otherwise the Layout bounces you back*/
