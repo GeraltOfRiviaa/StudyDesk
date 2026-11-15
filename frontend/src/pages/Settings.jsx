@@ -12,7 +12,6 @@ import { toast } from "@/components/ui/toast"
 import { useUser} from "@/AuthContext"
 import { useState } from 'react'
 
-
 function Settings() {
     const { user, refreshUser } = useUser()
     const navigate = useNavigate()
@@ -93,6 +92,7 @@ function Settings() {
                     </div>
                 )}
             />
+            
             <div className="flex flex-row justify-between mt-4 ">
                 <Button variant="default" size="sm" className="rounded-md" type="submit">Save</Button>
                 <Button variant="outline" size="sm" className="rounded-md" type="button" onClick={changePassword}>Change password</Button>
