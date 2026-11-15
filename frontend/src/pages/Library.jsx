@@ -4,7 +4,9 @@ import { ItemTypesButton } from "@/components/ui/buttons/item-types-buttons";
 import { Switch } from "@/components/ui/switch";
 import { FilterButton } from "@/components/ui/buttons/filter-button";
 import { useEffect, useState } from "react";
-
+import { Plus } from 'lucide-react'
+import { Button } from "@/components/ui/button";
+import { AddItemButton } from "@/components/ui/buttons/add-item-button";
 
 
 function Library() {
@@ -22,14 +24,14 @@ function Library() {
                         <BulkActionsButton size="sm" />
                         <ItemTypesButton size="sm" />
                     </div>
+                    <AddItemButton size="sm"/>
                     <div>
                         <div className="flex flex-row gap-2 my-auto">
                             <p>Tags</p>
                             <Switch />
                             <p>Items</p>
-                            <FilterButton />
+                            <FilterButton size="sm"/>
                         </div>
-
                     </div>
 
                 </div>

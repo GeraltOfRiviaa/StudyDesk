@@ -73,7 +73,6 @@ async def get_current_user(access_token: str | None = Cookie(default=None)) -> U
             raise CREDENTIALS_ERROR
         
         user = await users_collection.find_one({"_id": ObjectId(sub)})
-        print("user:", user)
     except (jwt.InvalidTokenError, InvalidId):
         raise CREDENTIALS_ERROR
     

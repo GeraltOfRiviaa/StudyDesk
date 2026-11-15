@@ -15,7 +15,7 @@ class NoteUpdate(UpdateModel):
     content: str | None = None
     tags: Tags | None = None
 class NoteDB(NoteBase):
-    id: PyObjectId = Field(validation_alias="_id")
+    id: PyObjectId
     user_id: PyObjectId
     created_at: AwareDatetime
     updated_at: AwareDatetime

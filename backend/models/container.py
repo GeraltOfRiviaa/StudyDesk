@@ -24,7 +24,7 @@ class ContainerCreate(ContainerBase):
     type: TypesEnum
 
 class ContainerDB(ContainerBase):
-    id: PyObjectId = Field(validation_alias="_id")
+    id: PyObjectId
     user_id: PyObjectId
     type: TypesEnum
     created_at: AwareDatetime

@@ -6,7 +6,7 @@ import { Home } from './pages/Dashboard'
 import { Layout } from './Layout';
 import { Login } from './pages/Login'
 import { Register } from './pages/Register';
-import { ChangePassword } from './ChangePassword';
+import { ChangePassword } from './pages/ChangePassword';
 
 function App() {
   return (

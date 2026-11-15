@@ -85,7 +85,7 @@ class EventUpdate(UpdateModel):
                 raise ValueError("repetition.until must be after start_time")
         return self
 class EventDB(EventBase):
-    id: PyObjectId = Field(validation_alias="_id")
+    id: PyObjectId
     user_id: PyObjectId
     created_at: AwareDatetime
     updated_at: AwareDatetime
