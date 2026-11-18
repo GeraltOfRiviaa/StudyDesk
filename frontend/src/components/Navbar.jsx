@@ -95,7 +95,7 @@ function Navbar() {
             {/* Desktop right: username + avatar (hidden on mobile) */}
             <div className="hidden md:flex min-w-0 flex-row gap-2.5 items-center justify-end">
                 <ModeToggle/>
-                {!loading ? <p className="...">Hello {user_username}!</p> : <Spinner />}
+                {!loading ? <p className="max-w-60 truncate">Hello {user_username}!</p> : <Spinner />}
                 <DropdownMenu>
                     <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="rounded-full shrink-0" type="button"><AvatarWithBadge username={user_username}></AvatarWithBadge></Button>} />
                     <DropdownMenuContent className="w-32">

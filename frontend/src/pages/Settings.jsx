@@ -24,7 +24,7 @@ function Settings() {
         }
 
         try {
-            await api("/auth/user/me", { method: "PATCH", json: changes })
+            await api("/auth/me", { method: "PATCH", json: changes })
             await refreshUser()
             form.reset()
             toast.add({ title: "User updated", type: "success" })

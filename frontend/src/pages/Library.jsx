@@ -11,13 +11,14 @@ import { api } from "@/api"
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { Checkbox } from "@/components/ui/checkbox"
+import { NoteModalSkeleton } from "@/components/modals/NoteModal";
 
 function Library() {
 
     const [notes, setNotes] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState()
-    const [checked, setChecked] = useState(false)
+    const [selected, setSelected] = useState(new Set())
 
     useEffect(() => {
         const fetchNotes = async () => {
@@ -33,6 +34,29 @@ function Library() {
         fetchNotes()
     }, [])
 
+    //pass notes id into toggle
+    const toggle = (id) => {
+        //pass previous state "selected" as prev 
+        // prev = {"ab1", "ab2", "ab3", "ab4"}
+        // each id represents a whole state
+        setSelected(prev => {
+            const next = new Set(prev)
+            // if the new id is in the set delete it, if not add it
+            next.has(id) ? next.delete(id) : next.add(id)
+            //return the whole set
+            return next
+        })
+    }
+    //if there are notes, and there is as many selected states as is notes return true, otherwise false
+    const allSelected = notes.length > 0 && selected.size === notes.length
+    //if there are selected notes and its not all return true, otherwise false
+    const someSelected = selected.size > 0 && !allSelected
+
+    const toggleAll = () =>
+        //when user clicks, then we check if all notes are selected
+        // if not we want to deselect them
+        //if yes we want to create a new state with a set of all the note ids 
+        setSelected(allSelected ? new Set() : new Set(notes.map(n => n.id)))
 
     return (
         <div id="library-mobile" className="flex flex-col h-full overflow-hidden px-4 gap-2 mx-auto md:max-w-200 lg:max-w-250">
@@ -52,11 +76,17 @@ function Library() {
                 {/* Header */}
                 <div className="flex items-center gap-2 px-2 h-10 shrink-0 bg-card border-b">
                     <div className="flex items-center gap-2 w-2/3">
-                        <Checkbox name="bulk-select-title" checked={checked} onCheckedChange={setChecked} />
+                        <Checkbox
+                            //if true then check
+                            checked={allSelected}
+                            //if true then return this hollow check 
+                            indeterminate={someSelected}
+                            //
+                            onCheckedChange={toggleAll}
+                        />
                         <p className="text-lg">Title</p>
                     </div>
                     <div className="flex items-center gap-2 w-1/3">
-                        <Checkbox name="bulk-select-tags" checked={checked} onCheckedChange={setChecked} />
                         <p className="text-lg">Tags</p>
                     </div>
                 </div>
@@ -74,17 +104,14 @@ function Library() {
                         </div>
                     ) : (
                         notes.map(n => (
-                            <div key={n.id} className="flex items-center gap-2 px-2 h-8 shrink-0 bg-card border-b">
-                                <Checkbox name={`${n.id}-checkbox`} checked={checked} onCheckedChange={setChecked} />
-                                <p className="truncate">{n.title}</p>
-                            </div>
+                            <NoteModalSkeleton key={n.id} note={n} selected={selected} onToggle={toggle} />
                         ))
                     )}
                 </div>
 
                 {/* Footer */}
                 <div className="flex items-center gap-2 px-2 h-14 shrink-0 bg-card justify-between ">
-                    <div className="flex flex-row gap-2 items-center">
+                    <div className="flex flex-row gap-2 items-center px-2">
                         <p>Items</p>
                         <Switch />
                         <p>Tags</p>
