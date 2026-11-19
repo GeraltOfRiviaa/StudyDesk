@@ -7,9 +7,9 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UpdateNoteForm } from "@/components/modals/NoteModal";
+import { UpdateNoteForm } from "@/components/modals/NoteUpdateModal";
 
-export function NoteRow({ note, selected, onToggle, onUpdated }) {
+export function NoteRow({ note, selected, onToggle, onUpdated, onFetchNewNotes }) {
     const [open, setOpen] = useState(false);
     const [fullNote, setFullNote] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -41,6 +41,7 @@ export function NoteRow({ note, selected, onToggle, onUpdated }) {
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
+            {/*row*/}
             <div className="flex items-center gap-2 px-2 h-8 border-b">
                 <Checkbox
                     checked={selected.has(note.id)}
@@ -54,6 +55,7 @@ export function NoteRow({ note, selected, onToggle, onUpdated }) {
                 </DialogTrigger>
             </div>
 
+            {/*Dialog content*/}
             <DialogContent>
                 {loading ? (
                     <div className="flex flex-col gap-2">
@@ -70,6 +72,7 @@ export function NoteRow({ note, selected, onToggle, onUpdated }) {
                         note={fullNote}
                         onUpdated={onUpdated}
                         onClose={() => setOpen(false)}
+                        fetchNewNotes={onFetchNewNotes}
                     />
                 ) : null}
             </DialogContent>

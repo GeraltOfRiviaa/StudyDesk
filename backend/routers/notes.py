@@ -142,7 +142,7 @@ async def filtered_list_notes(
 
 
 # Update note
-@router.patch(path='/{note_id}', status_code=200, response_model=NoteDB)
+@router.patch(path='/{note_id}', status_code=200, response_model=NotePublic)
 async def update_note(note_id: PyObjectId, data: NoteUpdate, user: UserPublic = Depends(get_current_user)):
     #Build the update from only the fields the client sent.
     changes = data.model_dump(exclude_unset=True)

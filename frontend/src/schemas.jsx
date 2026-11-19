@@ -49,5 +49,4 @@ export const CreateNoteSchema = z.object({
 export const UpdateNoteSchema = z.object({
     title: z.string().min(1, "Title is required").max(150),
     content: z.string(),
-    tags: z.array(z.string()),
 })

@@ -4,14 +4,11 @@ import { ItemTypesButton } from "@/components/ui/buttons/item-types-buttons";
 import { Switch } from "@/components/ui/switch";
 import { FilterButton } from "@/components/ui/buttons/filter-button";
 import { useEffect, useState } from "react";
-import { Ad, Plus } from 'lucide-react'
-import { Button } from "@/components/ui/button";
 import { AddItemButton } from "@/components/ui/buttons/add-item-button";
 import { api } from "@/api"
 import { Spinner } from "@/components/ui/spinner";
-import { toast } from "@/components/ui/toast";
 import { Checkbox } from "@/components/ui/checkbox"
-import { CreateNoteModal } from "@/components/modals/NoteModal";
+import { NoteCreateModal } from "@/components/modals/NoteCreateModal";
 import { NoteRow } from "@/components/modals/NoteRow"
 
 function Library() {
@@ -73,11 +70,20 @@ function Library() {
         //if yes we want to create a new state with a set of all the note ids 
         setSelected(allSelected ? new Set() : new Set(notes.map(n => n.id)))
 
+    // this function sits in here but is passed into each NoteRow
+    // and from there into UpdateNoteForm
+    // where it is coded into the onSubmit function of that form
     const handleNoteUpdated = (updatedNote) => {
+        //set the array of notes
         setNotes(prev =>
+            // loop over each note in previus set of notes
             prev.map(note =>
+                //check if the id from UpdateNoteForm (the updated note) 
+                // matches with the id we are currently at in the loop
                 note.id === updatedNote.id
+                    //if yes then combine the old note object with new note object
                     ? { ...note, ...updatedNote }
+                    // if not then return the old note
                     : note
             )
         )
@@ -135,6 +141,7 @@ function Library() {
                                 selected={selected}
                                 onToggle={toggle}
                                 onUpdated={handleNoteUpdated}
+                                onFetchNewNotes={fetchNotes}
                             />
                         ))
                     )}
@@ -151,7 +158,7 @@ function Library() {
 
                     <AddItemButton size="sm" onSelectType={setCreateType} />
                 </div>
-                <CreateNoteModal
+                <NoteCreateModal
                     open={createType === "note"}
                     onOpenChange={(open) => {
                         if (!open) setCreateType(null);
