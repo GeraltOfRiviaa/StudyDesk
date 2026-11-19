@@ -1,29 +1,32 @@
-import { ChevronDown, PlusIcon } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 import { Button } from "../button";
-import { DropdownMenu, DropdownMenuGroup, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../dropdown-menu";
+import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem
+} from "../dropdown-menu";
 
-export function AddItemButton({size}) {
+export function AddItemButton({ size, onSelectType }) {
     return (
-    <>
         <DropdownMenu>
-            <DropdownMenuTrigger render={<Button variant="outline" size={size} className="rounded-lg px-2"><PlusIcon/></Button>} />
+            <DropdownMenuTrigger render={
+                <Button size={size} variant="outline">
+                    <PlusIcon />
+                </Button>
+            }>
+            </DropdownMenuTrigger>
+
             <DropdownMenuContent>
-                <DropdownMenuGroup>
-                    <DropdownMenuItem>
-                        Note
+                {['Note', 'Archive', 'Calendar', 'Form'].map(type => (
+                    <DropdownMenuItem
+                        key={type}
+                        onClick={() => onSelectType(type.toLowerCase())}
+                    >
+                        {type}
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                        File
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                        Form
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                        Event
-                    </DropdownMenuItem>
-                </DropdownMenuGroup>
+                ))}
             </DropdownMenuContent>
         </DropdownMenu>
-    </>
-    )
+    );
 }

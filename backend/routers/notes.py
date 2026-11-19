@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query
-from models.note import NoteCreate, NoteDB, NoteUpdate
+from models.note import NoteCreate, NoteDB, NoteUpdate, NoteListItem, NotePublic
 from models.users import  UserPublic
 from database import db
 from core.security import get_current_user
@@ -19,16 +19,24 @@ notes_collection = db["notes"]
 
 # Transfer note result from queries to NoteDB class
 
-def to_note(doc: dict) -> NoteDB:
-    return NoteDB(
+def to_note(doc: dict) -> NotePublic:
+    return NotePublic(
         id=str(doc["_id"]),
-        user_id=str(doc["user_id"]),
         title=doc["title"],
-        content=doc["content"],
+        content=str(doc["content"]),
         tags=[str(t) for t in doc["tags"]],
         created_at=doc["created_at"],
         updated_at=doc["updated_at"],
     )
+    
+def to_note_item(doc: dict) -> NoteListItem:
+    return NoteListItem(
+            id=str(doc["_id"]),
+            title=doc["title"],
+            tags=[str(t) for t in doc["tags"]],
+            created_at=doc["created_at"],
+            updated_at=doc["updated_at"],
+        )
 
 
 ########################################################
@@ -58,7 +66,7 @@ async def create_note(note: NoteCreate, user: UserPublic = Depends(get_current_u
 
 # Get one note
 
-@router.get(path='/{note_id}', status_code=200, response_model=NoteDB)
+@router.get(path='/{note_id}', status_code=200, response_model=NotePublic)
 async def get_note(note_id: PyObjectId, user: UserPublic = Depends(get_current_user)):
 
     result = await notes_collection.find_one({"_id": ObjectId(note_id), "user_id": ObjectId(user.id)})
@@ -75,7 +83,7 @@ async def get_note(note_id: PyObjectId, user: UserPublic = Depends(get_current_u
 # Get all notes filtered by tags + specified 
 # ids (usefull when pinning a note or for single view) 
 
-@router.get(path='/', status_code=200, response_model=list[NoteDB])
+@router.get(path='/', status_code=200, response_model=list[NoteListItem])
 async def filtered_list_notes(
     q: Annotated[Title | None, Query()] = None,
     ids: Annotated[list[PyObjectId] | None, Query(max_length=100)] = None,
@@ -119,15 +127,15 @@ async def filtered_list_notes(
     
     direction = 1 if order == "asc" else -1
     docs = await (
-        notes_collection.find(query)
-            .collation({"locale": "en"})
-            .sort([(sort, direction), ("_id", direction)])
-            .skip(skip)
-            .limit(limit)
-            .to_list(length=limit)
+    notes_collection.find(query, {"content": 0})
+        .collation({"locale": "en"})
+        .sort([(sort, direction), ("_id", direction)])
+        .skip(skip)
+        .limit(limit)
+        .to_list(length=limit)
     )
         
-    return [to_note(d) for d in docs]
+    return [to_note_item(d) for d in docs]
 
 
 ########################################################

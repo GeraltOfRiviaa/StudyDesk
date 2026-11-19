@@ -4,14 +4,15 @@ import { ItemTypesButton } from "@/components/ui/buttons/item-types-buttons";
 import { Switch } from "@/components/ui/switch";
 import { FilterButton } from "@/components/ui/buttons/filter-button";
 import { useEffect, useState } from "react";
-import { Plus } from 'lucide-react'
+import { Ad, Plus } from 'lucide-react'
 import { Button } from "@/components/ui/button";
 import { AddItemButton } from "@/components/ui/buttons/add-item-button";
 import { api } from "@/api"
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/toast";
 import { Checkbox } from "@/components/ui/checkbox"
-import { NoteModalSkeleton } from "@/components/modals/NoteModal";
+import { CreateNoteModal } from "@/components/modals/NoteModal";
+import { NoteRow } from "@/components/modals/NoteRow"
 
 function Library() {
 
@@ -19,15 +20,29 @@ function Library() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState()
     const [selected, setSelected] = useState(new Set())
+    const [createType, setCreateType] = useState(null)
+
+    const fetchNotes = async () => {
+        try {
+            const response = await api("/notes/")
+            setNotes(response)
+            setError(null)
+        } catch {
+            setError("Could not fetch notes")
+        } finally {
+            setLoading(false)
+        }
+    }
 
     useEffect(() => {
         const fetchNotes = async () => {
             try {
-                const response = await api('/notes/', { method: "GET" })
+                const response = await api("/notes/")
                 setNotes(response)
-                setLoading(false)
+                setError(null)
             } catch {
                 setError("Could not fetch notes")
+            } finally {
                 setLoading(false)
             }
         }
@@ -57,6 +72,16 @@ function Library() {
         // if not we want to deselect them
         //if yes we want to create a new state with a set of all the note ids 
         setSelected(allSelected ? new Set() : new Set(notes.map(n => n.id)))
+
+    const handleNoteUpdated = (updatedNote) => {
+        setNotes(prev =>
+            prev.map(note =>
+                note.id === updatedNote.id
+                    ? { ...note, ...updatedNote }
+                    : note
+            )
+        )
+    }
 
     return (
         <div id="library-mobile" className="flex flex-col h-full overflow-hidden px-4 gap-2 mx-auto md:max-w-200 lg:max-w-250">
@@ -103,21 +128,36 @@ function Library() {
                             <p>Start by adding a widget to the dashboard and creating an item there.</p>
                         </div>
                     ) : (
-                        notes.map(n => (
-                            <NoteModalSkeleton key={n.id} note={n} selected={selected} onToggle={toggle} />
+                        notes.map(note => (
+                            <NoteRow
+                                key={note.id}
+                                note={note}
+                                selected={selected}
+                                onToggle={toggle}
+                                onUpdated={handleNoteUpdated}
+                            />
                         ))
                     )}
                 </div>
 
                 {/* Footer */}
+
                 <div className="flex items-center gap-2 px-2 h-14 shrink-0 bg-card justify-between ">
                     <div className="flex flex-row gap-2 items-center px-2">
                         <p>Items</p>
                         <Switch />
                         <p>Tags</p>
                     </div>
-                    <AddItemButton size="sm" />
+
+                    <AddItemButton size="sm" onSelectType={setCreateType} />
                 </div>
+                <CreateNoteModal
+                    open={createType === "note"}
+                    onOpenChange={(open) => {
+                        if (!open) setCreateType(null);
+                    }}
+                    onCreated={fetchNotes}
+                />
             </div>
         </div>
     )

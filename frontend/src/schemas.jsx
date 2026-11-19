@@ -41,3 +41,13 @@ export const ChangePasswordSchema = z.object({
     message: "New password must be different",
     path: ["newPassword"],
 })
+export const CreateNoteSchema = z.object({
+    title: z.string().min(1, "Title is required").max(150, "Maximum 150 characters"),
+    content: z.string(),
+    tags: z.array(z.string())
+});
+export const UpdateNoteSchema = z.object({
+    title: z.string().min(1, "Title is required").max(150),
+    content: z.string(),
+    tags: z.array(z.string()),
+})
