@@ -5,6 +5,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Field, FieldDescription, FieldGroup, FieldLabel, FieldSet } from "../ui/field"
+import { Input } from "../ui/input"
 
 export function NoteModal(note) {
     return (<div>
