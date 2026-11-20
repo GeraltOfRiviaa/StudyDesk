@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UpdateNoteForm } from "@/components/modals/NoteUpdateModal";
+import { UpdateNote } from "@/components/modals/NoteUpdateModal";
 
 export function NoteRow({ note, selected, onToggle, onUpdated, onFetchNewNotes }) {
     const [open, setOpen] = useState(false);
@@ -56,7 +56,7 @@ export function NoteRow({ note, selected, onToggle, onUpdated, onFetchNewNotes }
             </div>
 
             {/*Dialog content*/}
-            <DialogContent>
+            <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl md:max-w-2xl">
                 {loading ? (
                     <div className="flex flex-col gap-2">
                         <Skeleton className="h-6 w-24" />
@@ -67,7 +67,7 @@ export function NoteRow({ note, selected, onToggle, onUpdated, onFetchNewNotes }
                 ) : error ? (
                     <p>{error}</p>
                 ) : fullNote ? (
-                    <UpdateNoteForm
+                    <UpdateNote
                         key={fullNote.id}
                         note={fullNote}
                         onUpdated={onUpdated}

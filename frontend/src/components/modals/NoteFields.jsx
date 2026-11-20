@@ -26,7 +26,7 @@ export function NoteFields({ form, prefix }) {
                 control={form.control}
                 render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
-                        <FieldLabel htmlFor={`${prefix}-title`}>
+                        <FieldLabel htmlFor={`${prefix}-title`} className="text-lg">
                             Title
                         </FieldLabel>
 
@@ -50,7 +50,7 @@ export function NoteFields({ form, prefix }) {
                 control={form.control}
                 render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
-                        <FieldLabel htmlFor={`${prefix}-content`}>
+                        <FieldLabel htmlFor={`${prefix}-content`} className="text-lg">
                             Content
                         </FieldLabel>
 

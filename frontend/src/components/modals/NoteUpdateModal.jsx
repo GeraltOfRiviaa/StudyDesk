@@ -12,17 +12,19 @@ import { UpdateNoteSchema } from "@/schemas";
 import { api } from "@/api";
 import { toast } from "@/components/ui/toast";
 import { NoteFields } from "@/components/modals/NoteFields"
-
-
+import { Switch } from "../ui/switch";
+import Markdown from "react-markdown";
+import { useState } from "react";
 
 // UPDATE NOTE FORM
 // This component is rendered inside NoteRow's DialogContent.
-export function UpdateNoteForm({
+export function UpdateNote({
     note,
     onUpdated,
     onClose,
     fetchNewNotes
 }) {
+    const [viewMode, setViewMode] = useState(true);
     const form = useForm({
         resolver: zodResolver(UpdateNoteSchema),
         defaultValues: {
@@ -61,7 +63,7 @@ export function UpdateNoteForm({
 
     const deleteItem = async () => {
         try {
-            await api(`/notes/${note.id}`, {method: "DELETE"});
+            await api(`/notes/${note.id}`, { method: "DELETE" });
 
             toast.add({
                 title: "Note deleted",
@@ -78,43 +80,48 @@ export function UpdateNoteForm({
         }
     }
 
+    const handleCheckChange = () => {
+        viewMode ? setViewMode(false) : setViewMode(true)
+    }
+
     return (
         <>
             <DialogHeader>
-                <DialogTitle>Edit Note</DialogTitle>
+                <DialogTitle className="text-2xl">
+                    {viewMode ? note.title : "Edit Note"}
+                </DialogTitle>
+                <div className="flex flex-row pt-2 gap-2 justify-end">
+                    <Switch name="note-view-mode" onCheckedChange={handleCheckChange} checked={viewMode} />
+                    <p>View</p>
+                </div>
+
             </DialogHeader>
 
             <form
                 onSubmit={form.handleSubmit(onSubmit)}
                 className="flex flex-col gap-4"
             >
-                <NoteFields
-                    form={form}
-                    prefix="edit-note"
-                />
+                <div >
+                    {viewMode ?
+                        (<div className="prose prose-sm max-w-none dark:prose-invert pb-5">
+                            <Markdown>{note.content}</Markdown>
+                        </div>
+                        )
+                        :
+                        <NoteFields form={form} prefix="edit-note" />}
+
+                </div>
 
                 <DialogFooter className="sm:justify-start">
-                    <Button
-                        type="submit"
-                        size="sm"
-                        disabled={form.formState.isSubmitting}
-                    >
-                        Save changes
-                    </Button>
-                    <Button
-                        type="button"
-                        size="sm"
-                        variant="destructive"
-                        onClick={deleteItem}
-                    >
+                    {!viewMode && (
+                        <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
+                            Save changes
+                        </Button>
+                    )}
+                    <Button type="button" size="sm" variant="destructive" onClick={deleteItem}>
                         Delete
                     </Button>
-                    <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={onClose}
-                    >
+                    <Button type="button" size="sm" variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
                 </DialogFooter>
