@@ -32,7 +32,7 @@ function Navbar() {
 
     return (
 
-        <header className="flex justify-between items-center md:grid md:grid-cols-[1fr_auto_1fr] h-fit min-h-12.5  border-2 p-2 rounded-md bg-card">
+        <header className="flex justify-between items-center md:grid md:grid-cols-[1fr_auto_1fr] h-fit min-h-12.5 shrink-0  border-2 p-2 rounded-md bg-card ">
             {/* Left: logo */}
             <div className="min-w-0">
                 <Button variant="ghost" size="sm" render={<button type="button" />}>
@@ -95,7 +95,7 @@ function Navbar() {
             {/* Desktop right: username + avatar (hidden on mobile) */}
             <div className="hidden md:flex min-w-0 flex-row gap-2.5 items-center justify-end">
                 <ModeToggle/>
-                {!loading ? <p className="...">Hello {user_username}!</p> : <Spinner />}
+                {!loading ? <p className="max-w-60 truncate">Hello {user_username}!</p> : <Spinner />}
                 <DropdownMenu>
                     <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="rounded-full shrink-0" type="button"><AvatarWithBadge username={user_username}></AvatarWithBadge></Button>} />
                     <DropdownMenuContent className="w-32">

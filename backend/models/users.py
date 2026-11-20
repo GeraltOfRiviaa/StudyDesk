@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, AwareDatetime, Field, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, AwareDatetime, Field, field_validator
 from models.types import Username, Password, PyObjectId, UpdateModel
 
 
@@ -13,12 +13,17 @@ class UserCreate(UserBase):
 class UserUpdate(UpdateModel):
     email: EmailStr | None = None
     username: Username | None = None
+    
+    @field_validator("email")
+    @classmethod
+    def lower_email(cls, v):
+        return v.lower() if v else v
 
 class UserChangePassword(UpdateModel):
     old_password: Password
     new_password: Password
 class UserDB(UserBase):
-    id: PyObjectId = Field(validation_alias="_id")
+    id: PyObjectId
     password_hash: str
     created_at: AwareDatetime
     updated_at: AwareDatetime

@@ -1,12 +1,11 @@
 from datetime import datetime, timezone
 from bson import ObjectId
-from fastapi import HTTPException, Depends, APIRouter, Request, Cookie, Query, Response
+from fastapi import HTTPException, Depends, APIRouter, Cookie, Query, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from pymongo.errors import DuplicateKeyError
 from database import db
 from core.security import hash_password, generate_token, auth_user, get_current_user, verify_password
 from models.users import UserChangePassword, UserCreate, UserPublic, UserUpdate
-from models.types import Token
 from urllib.parse import urlencode
 from fastapi.responses import RedirectResponse
 import secrets
@@ -15,15 +14,19 @@ import os
 import re
 
 
-router = APIRouter(prefix="/auth")
-users = db["users"]
+router = APIRouter(prefix="/auth", tags=["Users"])
+users_collection = db["users"]
 
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
 USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
-REDIRECT_URI = "http://localhost:8000/auth/google/callback"  # must match Google Console exactly
+REDIRECT_URI = "http://localhost:8000/auth/google/callback" 
 FRONTEND_URL = "http://localhost:5173/dashboard"
 
+########################################################
+
+
+# Logout
 
 @router.post("/logout")
 async def logout(response: Response):
@@ -35,10 +38,16 @@ async def logout(response: Response):
     )
     return {"ok": True}
 
+
+########################################################
+
+
+# Register
+
 @router.post("/register", response_model=UserPublic, status_code=201)
 async def register(data: UserCreate):
     '''Register the user with email, username and password'''
-    if await users.find_one({"$or": [{"email": data.email}, {"username": data.username}]}):
+    if await users_collection.find_one({"$or": [{"email": data.email}, {"username": data.username}]}):
         raise HTTPException(status_code=409, detail="User already exists")
 
     now = datetime.now(timezone.utc)
@@ -50,7 +59,7 @@ async def register(data: UserCreate):
         "updated_at": now,
     }
     try:
-        result = await users.insert_one(doc)
+        result = await users_collection.insert_one(doc)
     except DuplicateKeyError:  # race condition safety net
         raise HTTPException(status_code=409, detail="User already exists")
     response = UserPublic(
@@ -61,6 +70,12 @@ async def register(data: UserCreate):
     )
 
     return response
+
+
+########################################################
+
+
+# Login
 
 @router.post("/login")
 async def login_user(response: Response, form: OAuth2PasswordRequestForm = Depends()):
@@ -79,58 +94,36 @@ async def login_user(response: Response, form: OAuth2PasswordRequestForm = Depen
     )
     return {"ok": True}  # no token in the body
 
-@router.patch("/user/update")
-async def update_user(update: UserUpdate, user=Depends(get_current_user)):
-    changes = {}
-    if update.username:
-        changes["username"] = update.username
-    if update.email:
-        changes["email"] = update.email
 
+########################################################
+
+
+# Update the user
+
+@router.patch("/me")
+async def update_user(data: UserUpdate, user: UserPublic = Depends(get_current_user)):
+    changes = data.model_dump(exclude_unset=True)
     if not changes:
-        raise HTTPException(400, "Nothing to update")
-
-    dupes = [{c: changes[c]} for c in ("username", "email") if c in changes]
-    # If there is any change recorded in "changes" in either "username" or "email" keys, write them into "dupes"
-    # dupes = {
-    #   "username": "changed"
-    #   "email": "changed"
-    #}
-    uid = ObjectId(user.id)  # works whether user.id is a str or an ObjectId
-
-    if dupes and await users.find_one({"$or": dupes, "_id": {"$ne": uid}}):
-        raise HTTPException(409, "Username or email already taken")
-    
+        raise HTTPException(status_code=400, detail="Nothing to update")
     changes["updated_at"] = datetime.now(timezone.utc)
-    result = await users.update_one({"_id": uid}, {"$set": changes})
+
+    try:
+        result = await users_collection.update_one(
+            {"_id": ObjectId(user.id)}, {"$set": changes}
+        )
+    except DuplicateKeyError:
+        raise HTTPException(status_code=409, detail="Email already in use")
+
     if result.matched_count == 0:
-        raise HTTPException(404, "User not found")
-
+        raise HTTPException(status_code=404, detail="User not found")
     return {"ok": True}
-# Step 1: send the user to Google's consent screen
-@router.get("/google/login")
-def google_login():
-    state = secrets.token_urlsafe(32)  # random CSRF token
 
-    params = {
-        "client_id": os.environ["CLIENT_ID"],
-        "redirect_uri": REDIRECT_URI,
-        "response_type": "code",
-        "scope": "openid email profile",
-        "state": state,
-    }
 
-    # urlencode escapes spaces/special chars
-    response = RedirectResponse(f"{GOOGLE_AUTH_URL}?{urlencode(params)}")
-    response.set_cookie(
-        key="oauth_state",
-        value=state,
-        max_age=600,
-        httponly=True,
-        samesite="lax",  # "strict" would block the cookie on Google's redirect back
-        secure=False,    # True in production (HTTPS)
-    )
-    return response
+
+########################################################
+
+
+# Change password
 
 @router.patch("/user/password")   # 1. new path, /user/update is already taken
 async def change_password(data: UserChangePassword ,user=Depends(get_current_user)):   # 2. async + Depends(get_current_user)
@@ -139,7 +132,7 @@ async def change_password(data: UserChangePassword ,user=Depends(get_current_use
     new = data.new_password
     # 2. load the user's password_hash from the DB
     id = ObjectId(user.id)
-    doc = await users.find_one({"_id": id})
+    doc = await users_collection.find_one({"_id": id})
     if not doc or not doc.get("password_hash"):
         raise HTTPException(status_code=404)
     # 3. verify the old password, raise error if it doesn't match
@@ -151,7 +144,7 @@ async def change_password(data: UserChangePassword ,user=Depends(get_current_use
     if new_hash == doc["password_hash"]:
         raise HTTPException(status_code=400)
     # 5. save it in the DB         
-    result = await users.update_one(
+    result = await users_collection.update_one(
         {"_id": id},
         {"$set": {
             "password_hash": new_hash,
@@ -162,6 +155,12 @@ async def change_password(data: UserChangePassword ,user=Depends(get_current_use
         raise HTTPException(404, "User not found")
     # 6. return {"ok": True}
     return {"ok": True}
+
+
+########################################################
+
+
+# Google callback
 
 # Step 2: Google redirects back here with ?code=...&state=...
 @router.get("/google/callback")
@@ -218,12 +217,12 @@ async def google_callback(
     if not email or not info.get("email_verified"):
         raise HTTPException(400, "Google email not verified")
 
-    user = await users.find_one({"email": email})
+    user = await users_collection.find_one({"email": email})
 
     if not user:
         base = re.sub(r"[^A-Za-z0-9_.-]", "", name) or "user"
         username = base
-        if await users.find_one({"username": username}):
+        if await users_collection.find_one({"username": username}):
             username = f"{base}_{secrets.token_hex(3)}"
         now = datetime.now(timezone.utc)
         doc = {
@@ -234,7 +233,7 @@ async def google_callback(
             "updated_at": now,
         }
         try:
-            result = await users.insert_one(doc)
+            result = await users_collection.insert_one(doc)
         except DuplicateKeyError:
             raise HTTPException(409, "User already exists")
         doc["_id"] = result.inserted_id
@@ -254,6 +253,43 @@ async def google_callback(
     )
     response.delete_cookie("oauth_state")  # state is single-use
     return response
+
+
+########################################################
+
+
+# Google login
+
+@router.get("/google/login")
+def google_login():
+    state = secrets.token_urlsafe(32)  # random CSRF token
+
+    params = {
+        "client_id": os.environ["CLIENT_ID"],
+        "redirect_uri": REDIRECT_URI,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "state": state,
+    }
+
+    # urlencode escapes spaces/special chars
+    response = RedirectResponse(f"{GOOGLE_AUTH_URL}?{urlencode(params)}")
+    response.set_cookie(
+        key="oauth_state",
+        value=state,
+        max_age=600,
+        httponly=True,
+        samesite="lax",  # "strict" would block the cookie on Google's redirect back
+        secure=False,    # True in production (HTTPS)
+    )
+    return response
+
+
+
+########################################################
+
+
+# Get user
 
 @router.get("/user", response_model=UserPublic)
 async def get_user(user=Depends(get_current_user)):

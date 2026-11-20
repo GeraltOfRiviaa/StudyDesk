@@ -17,7 +17,7 @@ class LinkCreate(LinkBase):
     model_config = ConfigDict(extra="forbid")
     
 class LinkDB(LinkBase):
-    id: PyObjectId = Field(validation_alias="_id")
+    id: PyObjectId
     user_id: PyObjectId
     created_at: AwareDatetime
     

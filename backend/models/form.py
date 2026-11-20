@@ -87,7 +87,7 @@ class FormUpdate(UpdateModel):
 
 
 class FormDB(FormBase):
-    id: PyObjectId = Field(validation_alias="_id")
+    id: PyObjectId
     user_id: PyObjectId
     created_at: AwareDatetime
     updated_at: AwareDatetime

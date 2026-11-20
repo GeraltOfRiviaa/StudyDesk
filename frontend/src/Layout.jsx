@@ -12,14 +12,12 @@ const Layout = () => {
 
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <div className="flex flex-col h-screen my-2 mx-2">
-        <header>
-          <Navbar />
-        </header>
-        <main className="flex-1">
+      <div className="flex flex-col h-dvh gap-2 p-2 overflow-hidden">
+          <Navbar/>
+        <main className="flex-1 min-h-0">
           <Outlet />
-          <Toaster />
         </main>
+        <Toaster />
       </div>
     </ThemeProvider>
   )

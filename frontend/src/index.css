@@ -1,6 +1,8 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 @import "tw-animate-css";
 @import "@fontsource-variable/figtree";
+
 
 @custom-variant dark (&:is(.dark *));
 

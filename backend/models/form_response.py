@@ -32,7 +32,7 @@ class FormResponseCreate(FormResponseBase):
 
 
 class FormResponseDB(FormResponseBase):
-    id: PyObjectId = Field(validation_alias="_id")
+    id: PyObjectId
     form_id: PyObjectId
     user_id: PyObjectId
     score: Score

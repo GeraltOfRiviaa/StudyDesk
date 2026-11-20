@@ -17,7 +17,7 @@ class ArchiveUpdate(UpdateModel):
     tags: Tags | None = None
 
 class ArchiveDB(ArchiveBase):
-    id: PyObjectId = Field(validation_alias="_id")
+    id: PyObjectId
     user_id: PyObjectId
     filename: FileName
     storage_path: StoragePath
