@@ -8,7 +8,7 @@ const Layout = () => {
   const { user, loading } = useUser()
 
   if (loading) return <div className="h-screen grid place-items-center w-screen">Loading...</div>
-  if (!user) return <Navigate to="/" replace />
+  if (!user) return <Navigate to="/login" replace />
 
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">

@@ -108,7 +108,7 @@ function Library() {
 
     const handleTagUpdated = (updatedTag) => {
         //set the array of notes
-        setNotes(prev =>
+        setTags(prev =>
             // loop over each note in previus set of notes
             prev.map(tag =>
                 //check if the id from UpdateNoteForm (the updated note) 
@@ -123,7 +123,13 @@ function Library() {
     }
 
     const handleLibrarySwitch = () => {
-        itemsMode ? setItemsMode(false) : setItemsMode(true)
+        if (itemsMode) {
+            setLoading(true);
+            fetchTags();
+        }
+
+        setSelected(new Set());
+        setItemsMode(prev => !prev);
     }
 
     return (
@@ -164,7 +170,7 @@ function Library() {
                 <div className="flex-1 min-h-0 overflow-y-auto">
                     {loading ? (<div className="flex h-full items-center justify-center p-4"><Spinner /></div>)
                         : error ? (<p className="p-4 text-center">{error}</p>)
-                            : notes.length === 0 ? (
+                            : (itemsMode ? notes : tags).length === 0 ? (
                                 <div className="flex h-full flex-col items-center justify-center p-4 text-center">
                                     <p>You have nothing here!</p>
                                     <p>Start by adding a widget to the dashboard and creating an item there.</p>
@@ -203,9 +209,9 @@ function Library() {
                         <p>Tags</p>
                     </div>
 
-                    {itemsMode? <AddItemButton size="sm" onSelectType={setCreateType} items={["Note", "File", "Form", "Event"]}/>
-                    : <AddItemButton size="sm" onSelectType={setCreateTag} items={["Tag"]}/>}
-                    
+                    {itemsMode ? <AddItemButton size="sm" onSelectType={setCreateType} items={["Note", "File", "Form", "Event"]} />
+                        : <AddItemButton size="sm" onSelectType={setCreateTag} items={["Tag"]} />}
+
                 </div>
                 <NoteCreateModal
                     open={createType === "note"}
@@ -220,7 +226,7 @@ function Library() {
                         if (!open) setCreateTag(null);
                     }}
                     onCreated={fetchTags}
-                    />
+                />
             </div>
         </div>
     )

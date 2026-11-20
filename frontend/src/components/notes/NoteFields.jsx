@@ -2,13 +2,13 @@ import {
     Field,
     FieldGroup,
     FieldLabel,
-    FieldDescription,
     FieldError,
 } from "@/components/ui/field";
 
 import { Controller } from "react-hook-form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import {TagSelector} from "@/components/tags/TagSelector";
 
 // Converts comma-separated tags into an array
 function parseTags(value) {
@@ -68,6 +68,26 @@ export function NoteFields({ form, prefix }) {
                     </Field>
                 )}
             />
+
+            <Controller
+                name="tags"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                        <FieldLabel>Tags</FieldLabel>
+
+                        <TagSelector
+                            value={field.value ?? []}
+                            onChange={field.onChange}
+                        />
+
+                        {fieldState.invalid && (
+                            <FieldError errors={[fieldState.error]} />
+                        )}
+                    </Field>
+                )}
+            />
+
         </FieldGroup>
     );
 }

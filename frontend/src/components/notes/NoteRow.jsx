@@ -56,7 +56,7 @@ export function NoteRow({ note, selected, onToggle, onUpdated, onFetchNewNotes }
             </div>
 
             {/*Dialog content*/}
-            <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl md:max-w-2xl">
+            <DialogContent className="flex flex-col max-h-[90dvh] overflow-y-auto sm:max-w-xl md:max-w-2xl">
                 {loading ? (
                     <div className="flex flex-col gap-2">
                         <Skeleton className="h-6 w-24" />

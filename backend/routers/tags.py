@@ -59,7 +59,7 @@ async def validate_tag_ids(user_id: str, tag_ids: Tags) -> Tags:
     count = await tags_collection.count_documents(
         {"_id": {"$in": ids}, "user_id": ObjectId(user_id)}
     )
-    if count != len(tag_ids):
+    if count != len(ids):
         raise HTTPException(status_code=400, detail="Invalid tag ids")
     return tag_ids
 
@@ -90,7 +90,7 @@ async def list_tags(
     query: dict[str, Any] = {"user_id": ObjectId(user.id)}
     if q:
         # ^ = starts with, re.escape stops "c++" or "(" breaking the regex
-        query["name"] = {"$regex": "^" + re.escape(q), "$options": "i"}
+        query["name"] = {"$regex": re.escape(q), "$options": "i"}
 
     docs = await (
         tags_collection.find(query, {"name": 1, "color": 1})
