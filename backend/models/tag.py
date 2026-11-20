@@ -3,18 +3,24 @@ from pydantic import BaseModel, ConfigDict, Field, AwareDatetime, model_validato
 from models.types import HexColor, PyObjectId, Tag, UpdateModel
 
 
-class MasterTagsBase(BaseModel):
+class TagBase(BaseModel):
     name: Tag
     color: HexColor
-class MasterTagsCreate(MasterTagsBase):
+class TagCreate(TagBase):
     model_config = ConfigDict(extra="forbid")
-class MasterTagsUpdate(UpdateModel):
+
+class TagUpdate(UpdateModel):
     name: Tag | None = None
     color: HexColor | None = None
     
-class MasterTagsDB(MasterTagsBase):
+class TagDB(TagBase):
     id: PyObjectId = Field(validation_alias="_id")
     user_id: PyObjectId
     created_at: AwareDatetime
     updated_at: AwareDatetime
-    
+
+
+class TagPublic(TagBase):
+    id: PyObjectId
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
