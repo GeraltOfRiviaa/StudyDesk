@@ -15,7 +15,7 @@ import { CreateNoteSchema } from "@/schemas";
 import { api } from "@/api";
 import { toast } from "@/components/ui/toast";
 
-import { NoteFields } from "@/components/modals/NoteFields"
+import { NoteFields } from "@/components/notes/NoteFields"
 
 // CREATE NOTE MODAL
 export function NoteCreateModal({

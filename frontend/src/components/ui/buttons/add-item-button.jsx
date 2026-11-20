@@ -7,7 +7,7 @@ import {
     DropdownMenuItem
 } from "../dropdown-menu";
 
-export function AddItemButton({ size, onSelectType }) {
+export function AddItemButton({ size, onSelectType, items }) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger render={
@@ -18,7 +18,7 @@ export function AddItemButton({ size, onSelectType }) {
             </DropdownMenuTrigger>
 
             <DropdownMenuContent>
-                {['Note', 'Archive', 'Calendar', 'Form'].map(type => (
+                {items.map(type => (
                     <DropdownMenuItem
                         key={type}
                         onClick={() => onSelectType(type.toLowerCase())}

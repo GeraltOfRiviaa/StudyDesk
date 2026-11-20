@@ -8,21 +8,38 @@ import { AddItemButton } from "@/components/ui/buttons/add-item-button";
 import { api } from "@/api"
 import { Spinner } from "@/components/ui/spinner";
 import { Checkbox } from "@/components/ui/checkbox"
-import { NoteCreateModal } from "@/components/modals/NoteCreateModal";
-import { NoteRow } from "@/components/modals/NoteRow"
+import { NoteCreateModal } from "@/components/notes/NoteCreateModal";
+import { NoteRow } from "@/components/notes/NoteRow"
+import { TagRow } from "@/components/tags/TagRows"
+import { TagCreateModal } from "@/components/tags/TagsCreateModal";
 
 function Library() {
 
     const [notes, setNotes] = useState([])
+    const [tags, setTags] = useState([])
+    const [createTag, setCreateTag] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState()
     const [selected, setSelected] = useState(new Set())
     const [createType, setCreateType] = useState(null)
+    const [itemsMode, setItemsMode] = useState(true)
 
     const fetchNotes = async () => {
         try {
             const response = await api("/notes/")
             setNotes(response)
+            setError(null)
+        } catch {
+            setError("Could not fetch notes")
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const fetchTags = async () => {
+        try {
+            const response = await api("/tags/")
+            setTags(response)
             setError(null)
         } catch {
             setError("Could not fetch notes")
@@ -89,6 +106,26 @@ function Library() {
         )
     }
 
+    const handleTagUpdated = (updatedTag) => {
+        //set the array of notes
+        setNotes(prev =>
+            // loop over each note in previus set of notes
+            prev.map(tag =>
+                //check if the id from UpdateNoteForm (the updated note) 
+                // matches with the id we are currently at in the loop
+                tag.id === updatedTag.id
+                    //if yes then combine the old note object with new note object
+                    ? { ...tag, ...updatedTag }
+                    // if not then return the old note
+                    : tag
+            )
+        )
+    }
+
+    const handleLibrarySwitch = () => {
+        itemsMode ? setItemsMode(false) : setItemsMode(true)
+    }
+
     return (
         <div id="library-mobile" className="flex flex-col h-full overflow-hidden px-4 gap-2 mx-auto md:max-w-200 lg:max-w-250">
             <div className="shrink-0 flex flex-col gap-2">
@@ -123,28 +160,38 @@ function Library() {
                 </div>
 
                 {/* Scrollable body */}
+
                 <div className="flex-1 min-h-0 overflow-y-auto">
-                    {loading ? (
-                        <div className="flex h-full items-center justify-center p-4"><Spinner /></div>
-                    ) : error ? (
-                        <p className="p-4 text-center">{error}</p>
-                    ) : notes.length === 0 ? (
-                        <div className="flex h-full flex-col items-center justify-center p-4 text-center">
-                            <p>You have nothing here!</p>
-                            <p>Start by adding a widget to the dashboard and creating an item there.</p>
-                        </div>
-                    ) : (
-                        notes.map(note => (
-                            <NoteRow
-                                key={note.id}
-                                note={note}
-                                selected={selected}
-                                onToggle={toggle}
-                                onUpdated={handleNoteUpdated}
-                                onFetchNewNotes={fetchNotes}
-                            />
-                        ))
-                    )}
+                    {loading ? (<div className="flex h-full items-center justify-center p-4"><Spinner /></div>)
+                        : error ? (<p className="p-4 text-center">{error}</p>)
+                            : notes.length === 0 ? (
+                                <div className="flex h-full flex-col items-center justify-center p-4 text-center">
+                                    <p>You have nothing here!</p>
+                                    <p>Start by adding a widget to the dashboard and creating an item there.</p>
+                                </div>)
+                                : itemsMode ?
+                                    notes.map(note => (
+                                        <NoteRow
+                                            key={note.id}
+                                            note={note}
+                                            selected={selected}
+                                            onToggle={toggle}
+                                            onUpdated={handleNoteUpdated}
+                                            onFetchNewNotes={fetchNotes}
+                                        />
+                                    ))
+                                    : tags.map(tag => (
+                                        <TagRow
+                                            key={tag.id}
+                                            tag={tag}
+                                            selected={selected}
+                                            onToggle={toggle}
+                                            onUpdated={handleTagUpdated}
+                                            onFetchNewTags={fetchTags}
+                                        />
+                                    ))
+                    }
+
                 </div>
 
                 {/* Footer */}
@@ -152,11 +199,13 @@ function Library() {
                 <div className="flex items-center gap-2 px-2 h-14 shrink-0 bg-card justify-between ">
                     <div className="flex flex-row gap-2 items-center px-2">
                         <p>Items</p>
-                        <Switch />
+                        <Switch onCheckedChange={handleLibrarySwitch} />
                         <p>Tags</p>
                     </div>
 
-                    <AddItemButton size="sm" onSelectType={setCreateType} />
+                    {itemsMode? <AddItemButton size="sm" onSelectType={setCreateType} items={["Note", "File", "Form", "Event"]}/>
+                    : <AddItemButton size="sm" onSelectType={setCreateTag} items={["Tag"]}/>}
+                    
                 </div>
                 <NoteCreateModal
                     open={createType === "note"}
@@ -165,6 +214,13 @@ function Library() {
                     }}
                     onCreated={fetchNotes}
                 />
+                <TagCreateModal
+                    open={createTag}
+                    onOpenChange={(open) => {
+                        if (!open) setCreateTag(null);
+                    }}
+                    onCreated={fetchTags}
+                    />
             </div>
         </div>
     )

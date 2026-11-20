@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Annotated
+from typing import Annotated, Any
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -7,11 +7,13 @@ from pymongo import ReturnDocument
 from pymongo.collation import Collation
 from pymongo.errors import DuplicateKeyError
 
-from models.tag import TagCreate, TagPublic, TagUpdate
+from models.tag import TagCreate, TagPublic, TagUpdate, TagListItem, TagDetail, TagUsage
 from models.users import UserPublic
 from models.types import PyObjectId, Tags, Tag
 from database import db
 from core.security import get_current_user
+
+import re
 
 router = APIRouter(prefix="/tags", tags=["Tags"])
 tags_collection = db["tags"]
@@ -38,6 +40,12 @@ def to_tag(doc: dict) -> TagPublic:
         created_at=doc["created_at"], 
         updated_at=doc["updated_at"],
     )
+    
+def to_tag_item(doc: dict) -> TagListItem:
+    return TagListItem(
+        id=str(doc["_id"]), 
+        name=doc["name"], 
+        color=doc["color"])
 
 ########################################################
 
@@ -73,28 +81,46 @@ async def count_usage(uid: ObjectId, tids: list[ObjectId]) -> dict[str, int]:
 
 # F1 - get all user's tags
 
-@router.get("/", status_code=200, response_model=list[TagPublic])
-async def list_tags(user: UserPublic = Depends(get_current_user)):
+@router.get("/", status_code=200, response_model=list[TagListItem])
+async def list_tags(
+    q: Annotated[str | None, Query(max_length=50)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    user: UserPublic = Depends(get_current_user),
+):
+    query: dict[str, Any] = {"user_id": ObjectId(user.id)}
+    if q:
+        # ^ = starts with, re.escape stops "c++" or "(" breaking the regex
+        query["name"] = {"$regex": "^" + re.escape(q), "$options": "i"}
+
     docs = await (
-        tags_collection.find({"user_id": ObjectId(user.id)})
+        tags_collection.find(query, {"name": 1, "color": 1})
         .collation(CI)
         .sort("name", 1)
-        .to_list(length=None)
+        .limit(limit)
+        .to_list(length=limit)
     )
-    return [to_tag(d) for d in docs]
+    return [to_tag_item(d) for d in docs]
+
 
 ########################################################
 
-# F2 - find tag by name (duplicate check), case-insensitive
 
-@router.get("/{name}", status_code=200, response_model=TagPublic)
-async def get_tag_by_name(name: Tag, user: UserPublic = Depends(get_current_user)):
-    doc = await tags_collection.find_one(
-        {"user_id": ObjectId(user.id), "name": name}, collation=CI
-    )
+# Get one tag + usage (modal)
+@router.get("/{tag_id}", status_code=200, response_model=TagDetail)
+async def get_tag(tag_id: PyObjectId, user: UserPublic = Depends(get_current_user)):
+    uid, tid = ObjectId(user.id), ObjectId(tag_id)
+    doc = await tags_collection.find_one({"_id": tid, "user_id": uid})
     if not doc:
         raise HTTPException(status_code=404, detail="Tag not found")
-    return to_tag(doc)
+
+    by_collection = await count_usage(uid, [tid])
+    return TagDetail(
+        **to_tag(doc).model_dump(),
+        usage=TagUsage(
+            total=sum(by_collection.values()), 
+            by_collection=by_collection),
+    )
+
 
 ########################################################
 

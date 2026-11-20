@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query
-from models.note import NoteCreate, NoteDB, NoteUpdate, NoteListItem, NotePublic
+from models.note import NoteCreate,  NoteUpdate, NoteListItem, NotePublic
 from models.users import  UserPublic
 from database import db
 from core.security import get_current_user
@@ -17,7 +17,7 @@ notes_collection = db["notes"]
 ########################################################
 
 
-# Transfer note result from queries to NoteDB class
+# Transfer note result from queries to NotePublic class
 
 def to_note(doc: dict) -> NotePublic:
     return NotePublic(

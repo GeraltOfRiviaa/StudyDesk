@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UpdateNote } from "@/components/modals/NoteUpdateModal";
+import { UpdateNote } from "@/components/notes/NoteUpdateModal";
 
 export function NoteRow({ note, selected, onToggle, onUpdated, onFetchNewNotes }) {
     const [open, setOpen] = useState(false);

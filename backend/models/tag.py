@@ -12,15 +12,18 @@ class TagCreate(TagBase):
 class TagUpdate(UpdateModel):
     name: Tag | None = None
     color: HexColor | None = None
-    
-class TagDB(TagBase):
-    id: PyObjectId = Field(validation_alias="_id")
-    user_id: PyObjectId
-    created_at: AwareDatetime
-    updated_at: AwareDatetime
-
 
 class TagPublic(TagBase):
     id: PyObjectId
     created_at: AwareDatetime
     updated_at: AwareDatetime
+    
+class TagListItem(TagBase):          # library rows
+    id: PyObjectId
+
+class TagUsage(BaseModel):
+    total: int
+    by_collection: dict[str, int]
+
+class TagDetail(TagPublic):          # modal
+    usage: TagUsage

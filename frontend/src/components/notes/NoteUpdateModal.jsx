@@ -11,8 +11,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { UpdateNoteSchema } from "@/schemas";
 import { api } from "@/api";
 import { toast } from "@/components/ui/toast";
-import { NoteFields } from "@/components/modals/NoteFields"
-import { Switch } from "../ui/switch";
+import { NoteFields } from "@/components/notes/NoteFields"
+import { Switch } from "@/components/ui/switch";
 import Markdown from "react-markdown";
 import { useState } from "react";
 
