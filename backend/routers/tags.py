@@ -2,12 +2,13 @@ from datetime import datetime, timezone
 from typing import Annotated, Any
 
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from pydantic import Field
 from pymongo import ReturnDocument
 from pymongo.collation import Collation
 from pymongo.errors import DuplicateKeyError
 
-from models.tag import TagCreate, TagPublic, TagUpdate, TagListItem, TagDetail, TagUsage
+from models.tag import TagCreate, TagPublic, TagUpdate, TagDetail, TagUsage
 from models.users import UserPublic
 from models.types import PyObjectId, Tags, Tag
 from database import db
@@ -41,11 +42,6 @@ def to_tag(doc: dict) -> TagPublic:
         updated_at=doc["updated_at"],
     )
     
-def to_tag_item(doc: dict) -> TagListItem:
-    return TagListItem(
-        id=str(doc["_id"]), 
-        name=doc["name"], 
-        color=doc["color"])
 
 ########################################################
 
@@ -81,9 +77,9 @@ async def count_usage(uid: ObjectId, tids: list[ObjectId]) -> dict[str, int]:
 
 # F1 - get all user's tags
 
-@router.get("/", status_code=200, response_model=list[TagListItem])
+@router.get("/", status_code=200, response_model=list[TagPublic])
 async def list_tags(
-    q: Annotated[str | None, Query(max_length=50)] = None,
+    q: Annotated[Tag | None, Query(max_length=50)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     user: UserPublic = Depends(get_current_user),
 ):
@@ -93,13 +89,34 @@ async def list_tags(
         query["name"] = {"$regex": re.escape(q), "$options": "i"}
 
     docs = await (
-        tags_collection.find(query, {"name": 1, "color": 1})
+        tags_collection.find(query)
         .collation(CI)
         .sort("name", 1)
         .limit(limit)
         .to_list(length=limit)
     )
-    return [to_tag_item(d) for d in docs]
+    return [to_tag(d) for d in docs]
+
+
+########################################################
+
+
+@router.post("/lookup", response_model=list[TagPublic])
+async def lookup_tags(
+    ids: Annotated[list[PyObjectId], Body(embed=True)],
+    user: UserPublic = Depends(get_current_user),
+):
+    object_ids = list({ObjectId(tag_id) for tag_id in ids})
+
+    if not ids:
+        return []
+
+    docs = await tags_collection.find({
+        "_id": {"$in": object_ids},
+        "user_id": ObjectId(user.id),
+    }).to_list(length=len(ids))
+
+    return [to_tag(doc) for doc in docs]
 
 
 ########################################################

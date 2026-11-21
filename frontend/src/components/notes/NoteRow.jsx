@@ -1,81 +1,69 @@
-import { useState } from "react";
-import { api } from "@/api";
-import {
-    Dialog,
-    DialogTrigger,
-    DialogContent
-} from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Skeleton } from "@/components/ui/skeleton";
-import { UpdateNote } from "@/components/notes/NoteUpdateModal";
+import { TagBadge } from "../tags/TagBadge";
+import { Badge } from "@/components/ui/badge";
+import { useItemModal } from "../ItemsModalContext";
 
-export function NoteRow({ note, selected, onToggle, onUpdated, onFetchNewNotes }) {
-    const [open, setOpen] = useState(false);
-    const [fullNote, setFullNote] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+export function NoteRow({ note, selected, onToggle, tags }) {
+    const { openItem } = useItemModal();
 
-    async function handleOpenChange(nextOpen) {
-        setOpen(nextOpen);
+    const noteTags = tags.filter(tag => note.tags?.includes(tag.id));
 
-        if (!nextOpen) {
-            setFullNote(null);
-            return;
-        }
-
-        setLoading(true);
-        setError(null);
-
-        try {
-            const data = await api(`/notes/${note.id}`, {
-                method: "GET",
-            });
-
-            setFullNote(data);
-        } catch {
-            setError("Could not load note");
-        } finally {
-            setLoading(false);
-        }
-    }
+    const formatDate = (date) =>
+        date ? new Date(date).toLocaleDateString() : "—";
 
     return (
-        <Dialog open={open} onOpenChange={handleOpenChange}>
-            {/*row*/}
-            <div className="flex items-center gap-2 px-2 h-8 border-b">
+        <div className="grid grid-cols-[minmax(0,1fr)_7rem] md:grid-cols-[minmax(0,1fr)_11rem_7rem] lg:grid-cols-[minmax(0,1fr)_14rem_8rem_8rem] items-center gap-2 px-2 min-h-9 border-b">
+            {/* Row uses the same columns as the Library header */}
+            <div className="flex min-w-0 items-center gap-2">
                 <Checkbox
                     checked={selected.has(note.id)}
                     onCheckedChange={() => onToggle(note.id)}
                 />
-
-                <DialogTrigger
-                    render={<button type="button" className="flex-1 text-left truncate" />}
+                <button
+                    type="button"
+                    onClick={() => openItem("note", note.id)}
+                    className="min-w-0 flex-1 truncate text-left hover:underline"
                 >
                     {note.title}
-                </DialogTrigger>
+                </button>
             </div>
 
-            {/*Dialog content*/}
-            <DialogContent className="flex flex-col max-h-[90dvh] overflow-y-auto sm:max-w-xl md:max-w-2xl">
-                {loading ? (
-                    <div className="flex flex-col gap-2">
-                        <Skeleton className="h-6 w-24" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-3/4" />
-                        <Skeleton className="h-40 w-full" />
+            <div className="flex min-w-0 items-center gap-1 overflow-hidden">
+                {noteTags.slice(0, 3).map((tag, index) => (
+                    <div
+                        key={tag.id}
+                        className={`min-w-0 shrink ${index === 1 ? "hidden md:block" : index === 2 ? "hidden lg:block" : "block"}`}
+                    >
+                        <div className="min-w-0 truncate *:max-w-full *:truncate">
+                            <TagBadge tag={tag} />
+                        </div>
                     </div>
-                ) : error ? (
-                    <p>{error}</p>
-                ) : fullNote ? (
-                    <UpdateNote
-                        key={fullNote.id}
-                        note={fullNote}
-                        onUpdated={onUpdated}
-                        onClose={() => setOpen(false)}
-                        fetchNewNotes={onFetchNewNotes}
-                    />
-                ) : null}
-            </DialogContent>
-        </Dialog>
+                ))}
+                {noteTags.length > 1 && (
+                    <Badge variant="secondary" className="md:hidden shrink-0">
+                        +{noteTags.length - 1}
+                    </Badge>
+                )}
+
+                {noteTags.length > 2 && (
+                    <Badge variant="secondary" className="hidden md:flex lg:hidden shrink-0">
+                        +{noteTags.length - 2}
+                    </Badge>
+                )}
+
+                {noteTags.length > 3 && (
+                    <Badge variant="secondary" className="hidden lg:flex shrink-0">
+                        +{noteTags.length - 3}
+                    </Badge>
+                )}
+            </div>
+
+            <span className="hidden truncate text-sm text-muted-foreground md:block">
+                {formatDate(note.created_at)}
+            </span>
+            <span className="hidden truncate text-sm text-muted-foreground lg:block">
+                {formatDate(note.updated_at)}
+            </span>
+        </div>
     );
 }

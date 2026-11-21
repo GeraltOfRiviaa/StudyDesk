@@ -17,9 +17,6 @@ class TagPublic(TagBase):
     id: PyObjectId
     created_at: AwareDatetime
     updated_at: AwareDatetime
-    
-class TagListItem(TagBase):          # library rows
-    id: PyObjectId
 
 class TagUsage(BaseModel):
     total: int

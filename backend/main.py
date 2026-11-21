@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends
 from database import db
-from routers import users, notes, tags
+from routers import users, notes, tags, links
 from core.security import get_current_user
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -10,6 +10,7 @@ app = FastAPI(swagger_ui_parameters={"persistAuthorization": True})
 app.include_router(users.router)
 app.include_router(notes.router)
 app.include_router(tags.router)
+app.include_router(links.router)
 
 app.add_middleware(
     CORSMiddleware,

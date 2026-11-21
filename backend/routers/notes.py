@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query
+from routers.tags import validate_tag_ids
 from models.note import NoteCreate,  NoteUpdate, NoteListItem, NotePublic
 from models.users import  UserPublic
 from database import db
@@ -48,6 +49,7 @@ def to_note_item(doc: dict) -> NoteListItem:
 async def create_note(note: NoteCreate, user: UserPublic = Depends(get_current_user)):
     uid = ObjectId(user.id)
     now = datetime.now(timezone.utc) 
+    await validate_tag_ids(user.id, note.tags)
     doc = {
         "user_id": uid, 
         "title": note.title, 
@@ -150,6 +152,8 @@ async def update_note(note_id: PyObjectId, data: NoteUpdate, user: UserPublic = 
         raise HTTPException(status_code=400, detail="Nothing to update")
     #Convert special fields
     if "tags" in changes:
+        changes["tags"] = [str(t) for t in changes["tags"]]
+        await validate_tag_ids(user.id, changes["tags"])
         changes["tags"] = [ObjectId(t) for t in changes["tags"]]
     
     #Set updated_at

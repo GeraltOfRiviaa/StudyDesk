@@ -3,7 +3,7 @@ import { BulkActionsButton } from "@/components/ui/buttons/bulk-actions-button";
 import { ItemTypesButton } from "@/components/ui/buttons/item-types-buttons";
 import { Switch } from "@/components/ui/switch";
 import { FilterButton } from "@/components/ui/buttons/filter-button";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AddItemButton } from "@/components/ui/buttons/add-item-button";
 import { api } from "@/api"
 import { Spinner } from "@/components/ui/spinner";
@@ -12,6 +12,7 @@ import { NoteCreateModal } from "@/components/notes/NoteCreateModal";
 import { NoteRow } from "@/components/notes/NoteRow"
 import { TagRow } from "@/components/tags/TagRows"
 import { TagCreateModal } from "@/components/tags/TagsCreateModal";
+import { useItemModal } from "@/components/ItemsModalContext";
 
 function Library() {
 
@@ -23,8 +24,9 @@ function Library() {
     const [selected, setSelected] = useState(new Set())
     const [createType, setCreateType] = useState(null)
     const [itemsMode, setItemsMode] = useState(true)
+    const { itemsRevision } = useItemModal();
 
-    const fetchNotes = async () => {
+    const fetchNotes = useCallback(async () => {
         try {
             const response = await api("/notes/")
             setNotes(response)
@@ -34,9 +36,9 @@ function Library() {
         } finally {
             setLoading(false)
         }
-    }
+    }, []);
 
-    const fetchTags = async () => {
+    const fetchTags = useCallback(async () => {
         try {
             const response = await api("/tags/")
             setTags(response)
@@ -46,22 +48,15 @@ function Library() {
         } finally {
             setLoading(false)
         }
-    }
+    }, []);
 
     useEffect(() => {
-        const fetchNotes = async () => {
-            try {
-                const response = await api("/notes/")
-                setNotes(response)
-                setError(null)
-            } catch {
-                setError("Could not fetch notes")
-            } finally {
-                setLoading(false)
-            }
-        }
-        fetchNotes()
-    }, [])
+        fetchNotes();
+    }, [fetchNotes, itemsRevision]);
+
+    useEffect(() => {
+        fetchTags();
+    }, [fetchTags]);
 
     //pass notes id into toggle
     const toggle = (id) => {
@@ -86,25 +81,6 @@ function Library() {
         // if not we want to deselect them
         //if yes we want to create a new state with a set of all the note ids 
         setSelected(allSelected ? new Set() : new Set(notes.map(n => n.id)))
-
-    // this function sits in here but is passed into each NoteRow
-    // and from there into UpdateNoteForm
-    // where it is coded into the onSubmit function of that form
-    const handleNoteUpdated = (updatedNote) => {
-        //set the array of notes
-        setNotes(prev =>
-            // loop over each note in previus set of notes
-            prev.map(note =>
-                //check if the id from UpdateNoteForm (the updated note) 
-                // matches with the id we are currently at in the loop
-                note.id === updatedNote.id
-                    //if yes then combine the old note object with new note object
-                    ? { ...note, ...updatedNote }
-                    // if not then return the old note
-                    : note
-            )
-        )
-    }
 
     const handleTagUpdated = (updatedTag) => {
         //set the array of notes
@@ -147,23 +123,35 @@ function Library() {
             </div>
 
             <div className="flex-1 min-h-0 flex flex-col border rounded-md overflow-hidden ">
-                {/* Header */}
-                <div className="flex items-center gap-2 px-2 h-10 shrink-0 bg-card border-b">
-                    <div className="flex items-center gap-2 w-2/3">
-                        <Checkbox
-                            //if true then check
-                            checked={allSelected}
-                            //if true then return this hollow check 
-                            indeterminate={someSelected}
-                            //
-                            onCheckedChange={toggleAll}
-                        />
-                        <p className="text-lg">Title</p>
+                {/* Header: use the same grid columns as NoteRow */}
+                {itemsMode ? (
+                    <div className="grid grid-cols-[minmax(0,1fr)_7rem] md:grid-cols-[minmax(0,1fr)_11rem_7rem] lg:grid-cols-[minmax(0,1fr)_14rem_8rem_8rem] items-center gap-2 px-2 h-10 shrink-0 bg-card border-b">
+                        <div className="flex min-w-0 items-center gap-2">
+                            <Checkbox
+                                checked={allSelected}
+                                indeterminate={someSelected}
+                                onCheckedChange={toggleAll}
+                            />
+                            <p className="text-lg">Title</p>
+                        </div>
+                        <p>Tags</p>
+                        <p className="hidden md:block">Created at</p>
+                        <p className="hidden lg:block">Updated at</p>
                     </div>
-                    <div className="flex items-center gap-2 w-1/3">
-                        <p className="text-lg">Tags</p>
+                ) : (
+                    <div className="grid grid-cols-[minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_7rem] md:grid-cols-[minmax(0,1fr)_8rem_8rem] items-center gap-2 px-2 h-10 shrink-0 bg-card border-b">
+                        <div className="flex min-w-0 items-center gap-2">
+                            <Checkbox
+                                checked={allSelected}
+                                indeterminate={someSelected}
+                                onCheckedChange={toggleAll}
+                            />
+                            <p className="text-lg">Title</p>
+                        </div>
+                        <p className="hidden sm:block">Created at</p>
+                        <p className="hidden md:block">Updated at</p>
                     </div>
-                </div>
+                )}
 
                 {/* Scrollable body */}
 
@@ -180,10 +168,9 @@ function Library() {
                                         <NoteRow
                                             key={note.id}
                                             note={note}
+                                            tags={tags}
                                             selected={selected}
                                             onToggle={toggle}
-                                            onUpdated={handleNoteUpdated}
-                                            onFetchNewNotes={fetchNotes}
                                         />
                                     ))
                                     : tags.map(tag => (

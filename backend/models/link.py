@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field, AwareDatetime, model_validator
+from pydantic import BaseModel, ConfigDict, AwareDatetime, model_validator
 from models.types import PyObjectId, TypesEnum
 
 class LinkBase(BaseModel):
@@ -6,6 +6,7 @@ class LinkBase(BaseModel):
     item_a_type: TypesEnum
     item_b_id: PyObjectId
     item_b_type: TypesEnum
+    model_config = ConfigDict(extra="forbid")
     
     @model_validator(mode="after")
     def no_self_link(self):
@@ -13,10 +14,7 @@ class LinkBase(BaseModel):
             raise ValueError("cannot link an item to itself")
         return self
     
-class LinkCreate(LinkBase):
-    model_config = ConfigDict(extra="forbid")
-    
-class LinkDB(LinkBase):
+class LinkPublic(LinkBase):
     id: PyObjectId
     user_id: PyObjectId
     created_at: AwareDatetime

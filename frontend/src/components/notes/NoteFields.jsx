@@ -8,17 +8,12 @@ import {
 import { Controller } from "react-hook-form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import {TagSelector} from "@/components/tags/TagSelector";
+import { TagSelector } from "@/components/tags/TagSelector";
+import { LinkSelector } from "../links/LinkSelector";
 
-// Converts comma-separated tags into an array
-function parseTags(value) {
-    return value
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean);
-}
 // Reusable fields for creating and updating notes
-export function NoteFields({ form, prefix }) {
+export function NoteFields({ form, prefix, noteId = null }) {
+
     return (
         <FieldGroup>
             <Controller
@@ -74,11 +69,36 @@ export function NoteFields({ form, prefix }) {
                 control={form.control}
                 render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
-                        <FieldLabel>Tags</FieldLabel>
+                        <FieldLabel className="text-lg">Tags</FieldLabel>
 
                         <TagSelector
                             value={field.value ?? []}
                             onChange={field.onChange}
+                        />
+
+                        {fieldState.invalid && (
+                            <FieldError errors={[fieldState.error]} />
+                        )}
+                    </Field>
+                )}
+            />
+
+
+
+            <Controller
+                name="links"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                        <FieldLabel className="text-lg">
+                            Links
+                        </FieldLabel>
+
+                        <LinkSelector
+                            value={field.value ?? []}
+                            onChange={field.onChange}
+                            sourceType={noteId ? "note" : null}
+                            sourceId={noteId}
                         />
 
                         {fieldState.invalid && (
