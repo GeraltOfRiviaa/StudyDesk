@@ -28,7 +28,7 @@ function Login() {
             })
             /*Load the user before navigating, otherwise the Layout bounces you back*/
             await refreshUser()
-            navigate("/dashboard")
+            navigate("/")
         } catch {
             toast.add({
                 title: "Could not authenticate a user",
