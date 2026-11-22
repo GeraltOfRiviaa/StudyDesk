@@ -10,23 +10,21 @@ import { toast } from "@/components/ui/toast";
 import { TagFields } from "@/components/tags/TagsFields"
 
 // CREATE TAG MODAL
-export function TagCreateModal({ open, onOpenChange, onCreated }) {
+export function TagCreateModal({ onCreated, onClose }) {
     const form = useForm({
         resolver: zodResolver(CreateTagSchema),
         defaultValues: { name: "", color: "#3b82f6" },
     });
-
     async function onSubmit(data) {
         try {
-            const createdTag = await api("/tags/", {
+            await api("/tags/", {
                 method: "POST",
                 json: { name: data.name, color: data.color },
             });
 
             toast.add({ title: "Tag created", type: "success" });
             form.reset();
-            onCreated?.(createdTag);
-            onOpenChange(false);
+            
         } catch (err) {
             toast.add({
                 title: "Could not create tag",
@@ -34,19 +32,21 @@ export function TagCreateModal({ open, onOpenChange, onCreated }) {
                 type: "error",
             });
         }
+        onCreated?.()
+        onClose?.()
     }
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-h-[90dvh] overflow-y-auto">
-                <DialogHeader>
+        <div className="flex min-h-0 flex-1 flex-col">
+            <DialogHeader className="shrink-0 pb-3">
                     <DialogTitle>Create Tag</DialogTitle>
                 </DialogHeader>
 
                 <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
-                    <TagFields form={form} prefix="create-tag" />
-
-                    <DialogFooter className="sm:justify-start">
+                    <div className="min-h-0 flex-1 overflow-y-auto">
+                        <TagFields form={form} prefix="create-tag" />
+                    </div>
+                    <DialogFooter className="shrink-0 border-t pt-3 sm:justify-start">
                         <Button type="submit" size="sm" disabled={form.formState.isSubmitting}>
                             Create
                         </Button>
@@ -55,7 +55,6 @@ export function TagCreateModal({ open, onOpenChange, onCreated }) {
                         />
                     </DialogFooter>
                 </form>
-            </DialogContent>
-        </Dialog>
+        </div>
     );
 }

@@ -18,13 +18,13 @@ function Library() {
 
     const [notes, setNotes] = useState([])
     const [tags, setTags] = useState([])
-    const [createTag, setCreateTag] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState()
     const [selected, setSelected] = useState(new Set())
-    const [createType, setCreateType] = useState(null)
     const [itemsMode, setItemsMode] = useState(true)
     const { itemsRevision } = useItemModal();
+    const { openItem } = useItemModal();
+
 
     const fetchNotes = useCallback(async () => {
         try {
@@ -52,7 +52,8 @@ function Library() {
 
     useEffect(() => {
         fetchNotes();
-    }, [fetchNotes, itemsRevision]);
+        fetchTags()
+    }, [fetchNotes, itemsRevision, fetchTags]);
 
     useEffect(() => {
         fetchTags();
@@ -72,7 +73,7 @@ function Library() {
         })
     }
     //if there are notes, and there is as many selected states as is notes return true, otherwise false
-    const allSelected = notes.length > 0 && selected.size === notes.length
+    const allSelected = notes.length > 0 && selected.size === notes.length || tags.length > 0 && selected.size === tags.length
     //if there are selected notes and its not all return true, otherwise false
     const someSelected = selected.size > 0 && !allSelected
 
@@ -196,11 +197,11 @@ function Library() {
                         <p>Tags</p>
                     </div>
 
-                    {itemsMode ? <AddItemButton size="sm" onSelectType={setCreateType} items={["Note", "File", "Form", "Event"]} />
-                        : <AddItemButton size="sm" onSelectType={setCreateTag} items={["Tag"]} />}
-
+                    {itemsMode ? <AddItemButton size="sm" onSelectType={type => openItem(type.toLowerCase(), null, "create")} items={["Note", "File", "Form", "Event"]}/>
+                        : <AddItemButton size="sm" onSelectType={type => openItem(type.toLowerCase(), null, "create")} items={["Tag"]}/>}
                 </div>
-                <NoteCreateModal
+
+                {/*<NoteCreateModal
                     open={createType === "note"}
                     onOpenChange={(open) => {
                         if (!open) setCreateType(null);
@@ -213,7 +214,7 @@ function Library() {
                         if (!open) setCreateTag(null);
                     }}
                     onCreated={fetchTags}
-                />
+                />*/}
             </div>
         </div>
     )

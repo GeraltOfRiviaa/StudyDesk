@@ -166,13 +166,7 @@ export function LinkSelector({
                             variant="outline"
                             className="flex items-center gap-2"
                         >
-                            <Link2 className="size-3"
-                                onClick={() => setModalToOpen({
-                                    type: link.item_type,
-                                    id: link.item_id,
-                                })} />
-
-
+                            <Link2 className="size-3"/>
                             <Button
                                 type="button"
                                 onClick={() => openItem(link.item_type, link.item_id)}

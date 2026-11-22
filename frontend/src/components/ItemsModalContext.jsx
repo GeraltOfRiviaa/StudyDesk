@@ -9,6 +9,7 @@ export function ItemModalProvider({ children }) {
     const [itemsRevision, setItemsRevision] = useState(0);
     const navigationGuard = useRef(null);
 
+
     const registerNavigationGuard = useCallback((guard) => {
         navigationGuard.current = guard;
 
@@ -17,13 +18,25 @@ export function ItemModalProvider({ children }) {
         };
     }, []);
 
-    function openItem(type, id) {
-        if (activeItem?.type === type && activeItem?.id === id) return;
+    // check whether we are trying to open the same note
+    // or it safe to go to another items modal
+    // if its not the same note and its safe to navigate
+    // then we set the active item to the new item 
+    function openItem(type, id = null, action = "update") {
+        if (
+            activeItem?.type === type &&
+            activeItem?.id === id &&
+            activeItem?.action === action
+        ) return;
+
         if (navigationGuard.current?.() === false) return;
+
         navigationGuard.current = null;
-        setActiveItem({ type, id });
+        setActiveItem({ type, id, action });
     }
 
+    // check whether we can safely navigate
+    // if yes then we set the active item to null
     function closeItem() {
         if (navigationGuard.current?.() === false) return;
         navigationGuard.current = null;

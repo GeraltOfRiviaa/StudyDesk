@@ -1,7 +1,5 @@
 import {
-    Dialog,
     DialogClose,
-    DialogContent,
     DialogFooter,
     DialogHeader,
     DialogTitle
@@ -20,9 +18,8 @@ import { syncItemLinks } from "@/components/links/linkApi";
 
 // CREATE NOTE MODAL
 export function NoteCreateModal({
-    open,
-    onOpenChange,
-    onCreated,
+    onClose,
+    onCreated
 }) {
     const form = useForm({
         resolver: zodResolver(CreateNoteSchema),
@@ -33,7 +30,6 @@ export function NoteCreateModal({
             links: [],
         },
     });
-
     async function onSubmit(data) {
         let createdNote;
         try {
@@ -45,6 +41,7 @@ export function NoteCreateModal({
                     tags: data.tags,
                 },
             });
+            
         } catch (error) {
             console.error("Could not create note", error);
             toast.add({
@@ -70,13 +67,12 @@ export function NoteCreateModal({
 
         // Do not retry note creation if a later link request fails.
         form.reset();
-        onCreated?.(createdNote);
-        onOpenChange(false);
+        onCreated?.()
+        onClose?.()
     }
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="flex max-h-[90dvh] flex-col overflow-hidden sm:max-w-xl md:max-w-2xl">
+
                 <div className="flex min-h-0 flex-1 flex-col">
                     <DialogHeader className="shrink-0 pb-3">
                         <DialogTitle>Create Note</DialogTitle>
@@ -104,7 +100,7 @@ export function NoteCreateModal({
 
                             <DialogClose
                                 render={
-                                    <Button type="button" size="sm" variant="outline">
+                                    <Button type="button" size="sm" variant="outline" onClick={onClose}>
                                         Cancel
                                     </Button>
                                 }
@@ -112,7 +108,5 @@ export function NoteCreateModal({
                         </DialogFooter>
                     </form>
                 </div>
-            </DialogContent>
-        </Dialog>
     );
 }

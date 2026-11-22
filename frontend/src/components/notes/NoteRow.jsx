@@ -2,6 +2,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { TagBadge } from "../tags/TagBadge";
 import { Badge } from "@/components/ui/badge";
 import { useItemModal } from "../ItemsModalContext";
+import { Button } from "../ui/button";
 
 export function NoteRow({ note, selected, onToggle, tags }) {
     const { openItem } = useItemModal();
@@ -19,13 +20,15 @@ export function NoteRow({ note, selected, onToggle, tags }) {
                     checked={selected.has(note.id)}
                     onCheckedChange={() => onToggle(note.id)}
                 />
-                <button
+                <Button
                     type="button"
-                    onClick={() => openItem("note", note.id)}
-                    className="min-w-0 flex-1 truncate text-left hover:underline"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => openItem("note", note.id, "update")}
+                    className="min-w-0 flex-1 truncate text-left hover:underline justify-start"
                 >
                     {note.title}
-                </button>
+                </Button>
             </div>
 
             <div className="flex min-w-0 items-center gap-1 overflow-hidden">

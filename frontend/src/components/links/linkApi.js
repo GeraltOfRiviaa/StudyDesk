@@ -5,7 +5,9 @@ export async function syncItemLinks(sourceType, sourceId, selectedLinks = []) {
     const existingLinks = await api(`/links/${sourceType}/${sourceId}`);
     const key = item => `${item.item_type}:${item.item_id}`;
 
+    //written in the DB
     const existing = new Map(existingLinks.map(link => [key(link), link]));
+    // selected in the form
     const selected = new Map(selectedLinks.map(link => [key(link), link]));
 
     // Add relationships selected in the form that do not exist in MongoDB.

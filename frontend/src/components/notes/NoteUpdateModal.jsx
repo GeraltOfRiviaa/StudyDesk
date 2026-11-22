@@ -18,8 +18,6 @@ import { useState, useEffect, useRef } from "react";
 import { TagBadge } from "@/components/tags/TagBadge";
 import { useItemModal } from "@/components/ItemsModalContext";
 import { syncItemLinks } from "@/components/links/linkApi";
-import { Link2 } from "lucide-react";
-import { Badge } from "../ui/badge";
 import { LinkBadge } from "@/components/links/LinkTagBadge";
 // UPDATE NOTE FORM
 export function UpdateNote({
@@ -34,7 +32,6 @@ export function UpdateNote({
     const [linksError, setLinksError] = useState(null);
     const allowNavigation = useRef(false);
     const { registerNavigationGuard } = useItemModal();
-    const { openItem } = useItemModal();
 
     useEffect(() => {
         async function fetchTags() {
