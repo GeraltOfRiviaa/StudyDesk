@@ -14,12 +14,6 @@ class NoteUpdate(UpdateModel):
     title: Title | None = None
     content: str | None = None
     tags: Tags | None = None
-class NoteDB(NoteBase):
-    id: PyObjectId
-    user_id: PyObjectId
-    content: str = Field(max_length=10000)
-    created_at: AwareDatetime
-    updated_at: AwareDatetime
 
 class NotePublic(NoteBase):
     id: PyObjectId

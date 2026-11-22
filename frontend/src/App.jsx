@@ -11,10 +11,10 @@ import { ChangePassword } from './pages/ChangePassword';
 function App() {
   return (
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route element={<Layout/>}>
-          <Route path="/dashboard" element={<Home />}/>
+          <Route path="/" element={<Home />}/>
           <Route path="/library" element={<Library />} />
           <Route path="/settings" element={<Settings/>} />
           <Route path="/settings/change/password" element={<ChangePassword/>} />

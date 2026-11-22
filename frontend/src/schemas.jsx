@@ -49,4 +49,15 @@ export const CreateNoteSchema = z.object({
 export const UpdateNoteSchema = z.object({
     title: z.string().min(1, "Title is required").max(150),
     content: z.string(),
+    tags: z.array(z.string())
 })
+
+
+const TagName = z.string().trim().min(1, "Name is required").max(50, "Maximum 50 characters")
+const HexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/, "Invalid color")
+
+export const CreateTagSchema = z.object({
+    name: TagName,
+    color: HexColor,
+});
+export const UpdateTagSchema = CreateTagSchema
