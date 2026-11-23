@@ -17,8 +17,8 @@ export function NoteRow({ note, selected, onToggle, tags }) {
             {/* Row uses the same columns as the Library header */}
             <div className="flex min-w-0 items-center gap-2">
                 <Checkbox
-                    checked={selected.has(note.id)}
-                    onCheckedChange={() => onToggle(note.id)}
+                    checked={selected.has(`note:${note.id}`)}
+                    onCheckedChange={() => onToggle("note", note.id)}
                 />
                 <Button
                     type="button"

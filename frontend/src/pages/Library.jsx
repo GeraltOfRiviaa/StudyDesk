@@ -1,18 +1,18 @@
 import { Search } from "@/components/ui/searches/search";
-import { BulkActionsButton } from "@/components/ui/buttons/bulk-actions-button";
+import { BulkActionsButton } from "@/components/ui/buttons/BulkActionsButton";
 import { ItemTypesButton } from "@/components/ui/buttons/item-types-buttons";
 import { Switch } from "@/components/ui/switch";
 import { FilterButton } from "@/components/ui/buttons/filter-button";
 import { useCallback, useEffect, useState } from "react";
-import { AddItemButton } from "@/components/ui/buttons/add-item-button";
+import { AddItemButton } from "@/components/ui/buttons/AddItemsButton";
 import { api } from "@/api"
 import { Spinner } from "@/components/ui/spinner";
 import { Checkbox } from "@/components/ui/checkbox"
-import { NoteCreateModal } from "@/components/notes/NoteCreateModal";
 import { NoteRow } from "@/components/notes/NoteRow"
 import { TagRow } from "@/components/tags/TagRows"
-import { TagCreateModal } from "@/components/tags/TagsCreateModal";
 import { useItemModal } from "@/components/ItemsModalContext";
+import { useBulkDelete } from "@/components/api/useBulkDelete";
+
 
 function Library() {
 
@@ -55,19 +55,22 @@ function Library() {
         fetchTags()
     }, [fetchNotes, itemsRevision, fetchTags]);
 
+    /*
     useEffect(() => {
         fetchTags();
     }, [fetchTags]);
+    */
 
     //pass notes id into toggle
-    const toggle = (id) => {
+    const toggle = (type, id) => {
+        const key = `${type}:${id}`
         //pass previous state "selected" as prev 
         // prev = {"ab1", "ab2", "ab3", "ab4"}
         // each id represents a whole state
         setSelected(prev => {
             const next = new Set(prev)
             // if the new id is in the set delete it, if not add it
-            next.has(id) ? next.delete(id) : next.add(id)
+            next.has(key) ? next.delete(key) : next.add(key)
             //return the whole set
             return next
         })
@@ -77,11 +80,17 @@ function Library() {
     //if there are selected notes and its not all return true, otherwise false
     const someSelected = selected.size > 0 && !allSelected
 
-    const toggleAll = () =>
+    const toggleAll = () =>{
+        if (itemsMode){
+            setSelected(allSelected ? new Set() : new Set(notes.map(n => `note:${n.id}`)))
+            return
+        }
+        setSelected(allSelected ? new Set() : new Set(tags.map(t => `tag:${t.id}`)))
+    }
         //when user clicks, then we check if all notes are selected
         // if not we want to deselect them
         //if yes we want to create a new state with a set of all the note ids 
-        setSelected(allSelected ? new Set() : new Set(notes.map(n => n.id)))
+        
 
     const handleTagUpdated = (updatedTag) => {
         //set the array of notes
@@ -99,6 +108,8 @@ function Library() {
         )
     }
 
+    
+
     const handleLibrarySwitch = () => {
         if (itemsMode) {
             setLoading(true);
@@ -109,6 +120,11 @@ function Library() {
         setItemsMode(prev => !prev);
     }
 
+    const selectedItems = [...selected].map(key => {
+        const [type, id] = key.split(":")
+        return { type, id }
+    })
+
     return (
         <div id="library-mobile" className="flex flex-col h-full overflow-hidden px-4 gap-2 mx-auto md:max-w-200 lg:max-w-250">
             <div className="shrink-0 flex flex-col gap-2">
@@ -116,7 +132,14 @@ function Library() {
                 <Search />
                 <div className="flex flex-row justify-between">
                     <div className="flex flex-row gap-2 my-auto">
-                        <BulkActionsButton size="sm" />
+                        <BulkActionsButton
+                            type="button"
+                            size="sm"
+                            selected={selectedItems}
+                            onDeleted={async () => {
+                                await Promise.all([fetchNotes(), fetchTags()])
+                                setSelected([])
+                            }} />
                         <ItemTypesButton size="sm" />
                     </div>
                     <FilterButton size="sm" />
@@ -197,24 +220,9 @@ function Library() {
                         <p>Tags</p>
                     </div>
 
-                    {itemsMode ? <AddItemButton size="sm" onSelectType={type => openItem(type.toLowerCase(), null, "create")} items={["Note", "File", "Form", "Event"]}/>
-                        : <AddItemButton size="sm" onSelectType={type => openItem(type.toLowerCase(), null, "create")} items={["Tag"]}/>}
+                    {itemsMode ? <AddItemButton size="sm" onSelectType={type => openItem(type.toLowerCase(), null, "create")} items={["Note", "File", "Form", "Event"]} />
+                        : <AddItemButton size="sm" onSelectType={type => openItem(type.toLowerCase(), null, "create")} items={["Tag"]} />}
                 </div>
-
-                {/*<NoteCreateModal
-                    open={createType === "note"}
-                    onOpenChange={(open) => {
-                        if (!open) setCreateType(null);
-                    }}
-                    onCreated={fetchNotes}
-                />
-                <TagCreateModal
-                    open={createTag}
-                    onOpenChange={(open) => {
-                        if (!open) setCreateTag(null);
-                    }}
-                    onCreated={fetchTags}
-                />*/}
             </div>
         </div>
     )

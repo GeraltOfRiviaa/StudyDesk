@@ -19,7 +19,7 @@ import { TagBadge } from "@/components/tags/TagBadge";
 import { useItemModal } from "@/components/ItemsModalContext";
 import { syncItemLinks } from "@/components/links/linkApi";
 import { LinkBadge } from "@/components/links/LinkTagBadge";
-import { deleteItem } from "@/components/api/deleteItem"
+import { deleteWithToast } from "@/components/api/deleteWithToast";
 
 // UPDATE NOTE FORM
 export function UpdateNote({
@@ -146,27 +146,13 @@ export function UpdateNote({
         onClose?.();
     }
 
-    /*
-    const deleteItem = async () => {
-        try {
-            await api(`/notes/${note.id}`, { method: "DELETE" });
-
-            toast.add({
-                title: "Note deleted",
-                type: "success",
-            });
-            allowNavigation.current = true;
-            onDeleted?.(note.id);
-            onClose?.();
-        } catch {
-            toast.add({
-                title: "Could not delete the note",
-                description: "Try again later",
-                type: "error",
-            });
-        }
+    
+    const handleDelete = async () => {
+        await deleteWithToast("note", note.id)
+        onDeleted?.()
+        onClose?.()
     }
-*/
+
     return (
         <div className="flex min-h-0 flex-col">
             <DialogHeader className="shrink-0 bg-transparent pb-3 gap-0">
@@ -221,7 +207,7 @@ export function UpdateNote({
                                 Save changes
                             </Button>
                         )}
-                        <Button type="button" size="sm" variant="destructive" onClick={deleteItem}>
+                        <Button type="button" size="sm" variant="destructive" onClick={handleDelete}>
                             Delete
                         </Button>
                         <Button type="button" size="sm" variant="outline" onClick={onClose}>
