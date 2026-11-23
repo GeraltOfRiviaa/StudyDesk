@@ -19,6 +19,8 @@ import { TagBadge } from "@/components/tags/TagBadge";
 import { useItemModal } from "@/components/ItemsModalContext";
 import { syncItemLinks } from "@/components/links/linkApi";
 import { LinkBadge } from "@/components/links/LinkTagBadge";
+import { deleteItem } from "@/components/api/deleteItem"
+
 // UPDATE NOTE FORM
 export function UpdateNote({
     note,
@@ -144,6 +146,7 @@ export function UpdateNote({
         onClose?.();
     }
 
+    /*
     const deleteItem = async () => {
         try {
             await api(`/notes/${note.id}`, { method: "DELETE" });
@@ -163,7 +166,7 @@ export function UpdateNote({
             });
         }
     }
-
+*/
     return (
         <div className="flex min-h-0 flex-col">
             <DialogHeader className="shrink-0 bg-transparent pb-3 gap-0">
