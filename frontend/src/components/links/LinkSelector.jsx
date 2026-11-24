@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { api } from "@/api";
+import { api } from "@/api/client";
 import { X, Link2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -11,7 +11,7 @@ import {
     CommandList,
     CommandInput,
 } from "@/components/ui/command";
-import { useItemModal } from "@/components/ItemsModalContext";
+import { useItemModal } from "@/context/ItemsModalContext";
 import { Button } from "../ui/button";
 
 

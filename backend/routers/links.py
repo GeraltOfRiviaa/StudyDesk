@@ -21,7 +21,7 @@ links_collection = db["links"]
 # Map TypesEnum values to MongoDB collections
 ITEM_COLLECTIONS = {
     TypesEnum.note: "notes",
-    TypesEnum.archive: "archive",
+    TypesEnum.archive: "files",
     TypesEnum.event: "events",
     TypesEnum.form: "forms",
 }

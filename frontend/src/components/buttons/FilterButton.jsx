@@ -1,5 +1,5 @@
 import { Filter } from "lucide-react";
-import { Button } from "../button";
+import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
     DropdownMenuGroup,
@@ -9,7 +9,7 @@ import {
     DropdownMenuSub,
     DropdownMenuSubTrigger,
     DropdownMenuSubContent,
-} from "../dropdown-menu";
+} from "@/components/ui/dropdown-menu";
 
 export function FilterButton({ size }) {
     return (

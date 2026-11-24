@@ -11,9 +11,9 @@ import {
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom"
 import { useEffect, useState } from "react"
-import { useUser } from "@/AuthContext"
+import { useUser } from "@/context/AuthContext"
 import { Spinner } from "./ui/spinner";
-import { api } from '@/api'
+import { api } from '@/api/client'
 import {ModeToggle} from '@/components/ThemeToggle'
 
 
@@ -21,11 +21,7 @@ function Navbar() {
     const { setUser } = useUser()
     const { user, loading } = useUser()
     const navigate = useNavigate()
-    const logout = async () => {
-        await api("/auth/logout", { method: "POST" })
-        setUser(null)
-        navigate("/")
-    }
+    const { logout } = useUser()
 
     const user_username = user?.username ?? ""
     

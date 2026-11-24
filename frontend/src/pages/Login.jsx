@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button"
 import { InputGroup, InputGroupInput } from "@/components/ui/input-group"
 import { toast, Toaster } from "@/components/ui/toast"
 import { LoginSchema } from "../schemas"
-import { useUser } from "@/AuthContext"
-import { api } from "@/api"
+import { useUser } from "@/context/AuthContext"
+import { api } from "@/api/client"
 
 function Login() {
     const { refreshUser } = useUser()

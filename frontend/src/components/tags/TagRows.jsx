@@ -1,6 +1,6 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { useItemModal } from "@/components/ItemsModalContext";
+import { useItemModal } from "@/context/ItemsModalContext";
 
 const formatDate = (date) => date ? new Date(date).toLocaleDateString() : "—";
 

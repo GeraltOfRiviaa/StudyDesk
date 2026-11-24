@@ -111,3 +111,8 @@ class TableItem(BaseModel):
     tags: Tags
     created_at: AwareDatetime
     updated_at: AwareDatetime
+    
+class PaginatedItems(BaseModel):
+    items: list[TableItem]
+    next_cursor: str | None = None
+    has_more: bool

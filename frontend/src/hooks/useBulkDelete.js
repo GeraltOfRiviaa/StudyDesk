@@ -1,6 +1,6 @@
 import { useState } from "react"
-import { toast } from "../ui/toast"
-import { deleteItem } from "@/components/api/deteleItem"
+import { toast } from "@/components/ui/toast"
+import { deleteItem } from "@/api/deleteItem"
 
 export const useBulkDelete = () => {
     const [isDeleting, setIsDeleting] = useState(false)

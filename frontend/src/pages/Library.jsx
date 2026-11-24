@@ -1,17 +1,16 @@
 import { Search } from "@/components/ui/searches/search";
-import { BulkActionsButton } from "@/components/ui/buttons/BulkActionsButton";
-import { ItemTypesButton } from "@/components/ui/buttons/item-types-buttons";
+import { BulkActionsButton } from "@/components/buttons/BulkActionsButton";
+import { ItemTypesButton } from "@/components/buttons/ItemTypesButton";
 import { Switch } from "@/components/ui/switch";
-import { FilterButton } from "@/components/ui/buttons/filter-button";
+import { FilterButton } from "@/components/buttons/FilterButton";
 import { useCallback, useEffect, useState } from "react";
-import { AddItemButton } from "@/components/ui/buttons/AddItemsButton";
-import { api } from "@/api"
+import { AddItemButton } from "@/components/buttons/AddItemsButton";
+import { api } from "@/api/client"
 import { Spinner } from "@/components/ui/spinner";
 import { Checkbox } from "@/components/ui/checkbox"
 import { NoteRow } from "@/components/notes/NoteRow"
 import { TagRow } from "@/components/tags/TagRows"
-import { useItemModal } from "@/components/ItemsModalContext";
-import { useBulkDelete } from "@/components/api/useBulkDelete";
+import { useItemModal } from "@/context/ItemsModalContext";
 
 
 function Library() {

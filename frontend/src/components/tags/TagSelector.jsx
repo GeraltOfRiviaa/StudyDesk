@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { api } from "@/api";
+import { api } from "@/api/client";
 import { TagBadge } from "@/components/tags/TagBadge";
 import { X } from "lucide-react";
 import {
@@ -19,7 +19,7 @@ export function TagSelector({ value = [], onChange }) {
     const [creating, setCreating] = useState(false);
 
     useEffect(() => {
-        api("/tags/?limit=100")
+        api("/tags/?limit=30")
             .then(setTags)
             .catch(console.error);
     }, []);

@@ -9,17 +9,17 @@ import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { UpdateNoteSchema } from "@/schemas";
-import { api } from "@/api";
+import { api } from "@/api/client";
 import { toast } from "@/components/ui/toast";
 import { NoteFields } from "@/components/notes/NoteFields"
 import { Switch } from "@/components/ui/switch";
 import Markdown from "react-markdown";
 import { useState, useEffect, useRef } from "react";
 import { TagBadge } from "@/components/tags/TagBadge";
-import { useItemModal } from "@/components/ItemsModalContext";
-import { syncItemLinks } from "@/components/links/linkApi";
+import { useItemModal } from "@/context/ItemsModalContext";
+import { syncItemLinks } from "@/api/linkApi";
 import { LinkBadge } from "@/components/links/LinkTagBadge";
-import { deleteWithToast } from "@/components/api/deleteWithToast";
+import { deleteWithToast } from "@/utils/deleteWithToast";
 
 // UPDATE NOTE FORM
 export function UpdateNote({
@@ -38,7 +38,7 @@ export function UpdateNote({
     useEffect(() => {
         async function fetchTags() {
             try {
-                const tags = await api("/tags/?limit=100");
+                const tags = await api("/tags/?limit=30");
                 setAvailableTags(tags);
             } catch (error) {
                 console.error("Could not fetch tags", error);

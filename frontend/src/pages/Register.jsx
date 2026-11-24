@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { InputGroup, InputGroupInput } from "@/components/ui/input-group"
 import { toast, Toaster } from "@/components/ui/toast"
 import { RegisterSchema } from "../schemas"
-import { api } from "@/api"
+import { api } from "@/api/client"
 
 function Register() {
     const navigate = useNavigate()

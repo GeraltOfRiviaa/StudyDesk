@@ -1,7 +1,7 @@
 import { ChevronDown } from "lucide-react";
-import { Button } from "../button";
-import { DropdownMenu, DropdownMenuGroup, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../dropdown-menu";
-import { useBulkDelete } from "@/components/api/useBulkDelete";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuGroup, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { useBulkDelete } from "@/hooks/useBulkDelete";
 
 export function BulkActionsButton({ size, selected, onDeleted }) {
     const { bulkDelete } = useBulkDelete()

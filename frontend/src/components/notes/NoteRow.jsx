@@ -1,8 +1,8 @@
 import { Checkbox } from "@/components/ui/checkbox";
-import { TagBadge } from "../tags/TagBadge";
+import { TagBadge } from "@/components/tags/TagBadge";
 import { Badge } from "@/components/ui/badge";
-import { useItemModal } from "../ItemsModalContext";
-import { Button } from "../ui/button";
+import { useItemModal } from "@/context/ItemsModalContext";
+import { Button } from "@/components/ui/button";
 
 export function NoteRow({ note, selected, onToggle, tags }) {
     const { openItem } = useItemModal();

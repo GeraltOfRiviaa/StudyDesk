@@ -7,9 +7,9 @@ import { useNavigate } from 'react-router-dom';
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm, Controller } from "react-hook-form"
 import { UpdateUserSchema } from '../schemas'
-import { api } from '@/api'
+import { api } from '@/api/client'
 import { toast } from "@/components/ui/toast"
-import { useUser} from "@/AuthContext"
+import { useUser} from "@/context/AuthContext"
 import { useState } from 'react'
 
 function Settings() {

@@ -7,10 +7,10 @@ from models.note import NoteCreate,  NoteUpdate, NoteListItem, NotePublic
 from models.users import  UserPublic
 from database import db
 from core.security import get_current_user
-from typing import Annotated, Any, Literal
+from typing import Annotated, Literal
 from models.types import PyObjectId, Title
 from pymongo import ReturnDocument
-import re
+from core.search import filtered_list
 
 router = APIRouter(prefix="/notes", tags=["Notes"])
 notes_collection = db["notes"]
@@ -92,52 +92,24 @@ async def filtered_list_notes(
     tags: Annotated[list[PyObjectId] | None, Query(max_length=100)] = None,
     match: Literal["none", "any", "all", "exact"] | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
-    skip: Annotated[int, Query(ge=0)] = 0,
+    cursor: str | None = None,
     sort: Literal["updated_at", "created_at", "title", "tags"] = "updated_at",
     order: Literal["asc", "desc"] = "desc",
     user: UserPublic = Depends(get_current_user),
 ):
-    query: dict[str, Any] = {"user_id": ObjectId(user.id)}
-    # ids handling (unchanged)
-    # tag validation + match branching goes here, before the find
-    
-    if ids:
-        query["_id"] = {"$in": [ObjectId(i) for i in set(ids)]}
-
-    if match == "none" and tags:
-        raise HTTPException(status_code=400, detail="tags not allowed with match=none")
-    if match in ("any", "all", "exact") and not tags:
-        raise HTTPException(status_code=400, detail="tags required for this match")
-    if tags and match is None:
-        match = "any"
-
-    # Convert the ids from str to ObjectId
-    # use set(tags) to remove duplicates
-    # if there are no tags then keep the tag_ids empty
-    tag_ids = [ObjectId(t) for t in set(tags)] if tags else []
-    if match == "none":
-        query["tags"] = []
-    elif match == "any":
-        query["tags"] = {"$in": tag_ids}
-    elif match == "all":
-        query["tags"] = {"$all": tag_ids}
-    elif match == "exact":
-        query["tags"] = {"$all": tag_ids, "$size": len(tag_ids)}
-        
-    if q:
-        query["title"] = {"$regex": re.escape(q), "$options": "i"}
-    
-    direction = 1 if order == "asc" else -1
-    docs = await (
-    notes_collection.find(query, {"content": 0})
-        .collation({"locale": "en"})
-        .sort([(sort, direction), ("_id", direction)])
-        .skip(skip)
-        .limit(limit)
-        .to_list(length=limit)
-    )
-        
-    return [to_note_item(d) for d in docs]
+    result =  await filtered_list(
+            user_id=user.id,
+            collections=["notes"],
+            q=q,
+            ids=ids,
+            tags=tags,
+            match=match,
+            limit=limit,
+            cursor=cursor,
+            sort=sort,
+            order=order
+        )
+    return result.items
 
 
 ########################################################

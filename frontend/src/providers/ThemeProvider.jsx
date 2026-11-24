@@ -1,6 +1,6 @@
 //ThemeProvider.jsx
 import { useEffect, useState } from "react"
-import { ThemeProviderContext } from "./ThemeContext"
+import { ThemeProviderContext } from "../context/ThemeContext"
 
 export function ThemeProvider({
     children,

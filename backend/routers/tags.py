@@ -80,12 +80,11 @@ async def count_usage(uid: ObjectId, tids: list[ObjectId]) -> dict[str, int]:
 @router.get("/", status_code=200, response_model=list[TagPublic])
 async def list_tags(
     q: Annotated[Tag | None, Query(max_length=50)] = None,
-    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+    limit: Annotated[int, Query(ge=1, le=50)] = 30,
     user: UserPublic = Depends(get_current_user),
 ):
     query: dict[str, Any] = {"user_id": ObjectId(user.id)}
     if q:
-        # ^ = starts with, re.escape stops "c++" or "(" breaking the regex
         query["name"] = {"$regex": re.escape(q), "$options": "i"}
 
     docs = await (
@@ -99,6 +98,8 @@ async def list_tags(
 
 
 ########################################################
+
+# Find all the ids listed of a certain user
 
 
 @router.post("/lookup", response_model=list[TagPublic])

@@ -1,5 +1,5 @@
-import { toast } from "../ui/toast";
-import { deleteItem } from "@/components/api/deteleItem";
+import { toast } from "@/components/ui/toast";
+import { deleteItem } from "@/api/deleteItem";
 
 
 export const deleteWithToast = async (type, id) =>{

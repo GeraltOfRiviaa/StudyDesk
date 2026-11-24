@@ -10,11 +10,11 @@ import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CreateNoteSchema } from "@/schemas";
-import { api } from "@/api";
+import { api } from "@/api/client";
 import { toast } from "@/components/ui/toast";
 
 import { NoteFields } from "@/components/notes/NoteFields"
-import { syncItemLinks } from "@/components/links/linkApi";
+import { syncItemLinks } from "@/api/linkApi";
 
 // CREATE NOTE MODAL
 export function NoteCreateModal({

@@ -1,6 +1,12 @@
 import { ChevronDown } from "lucide-react";
-import { Button } from "../button";
-import { DropdownMenu, DropdownMenuGroup, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "../dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { 
+    DropdownMenu, 
+    DropdownMenuGroup, 
+    DropdownMenuTrigger, 
+    DropdownMenuContent, 
+    DropdownMenuItem 
+} from "@/components/ui/dropdown-menu";
 
 export function ItemTypesButton({size}) {
     return (
