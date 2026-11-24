@@ -1,6 +1,6 @@
 from pydantic import  Field, BeforeValidator,  StringConstraints, AwareDatetime, AfterValidator, BaseModel, ConfigDict, model_validator
 from bson import ObjectId
-from typing import Annotated
+from typing import Annotated, Literal
 from enum import Enum
 
 
@@ -103,3 +103,11 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: str | None = None
+
+class TableItem(BaseModel):
+    id: PyObjectId
+    type: Literal["note", "form", "event", "file"]
+    title: Title
+    tags: Tags
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
