@@ -30,7 +30,11 @@ export async function fetchLibrary({
 
     //add more params if set
     if (q) params.set("q", q)
-    if (match) params.set("match", match)
+    if (match && (tags?.length > 0 || match === "none")) {
+        params.set("match", match)
+    } if (match && (tags?.length > 0 || match === "none")) {
+        params.set("match", match)
+    }
     if (cursor) params.set("cursor", cursor)
 
     params.set("sort", sort)
@@ -40,7 +44,7 @@ export async function fetchLibrary({
     //make the API call and pass the signal
     //to allow TanStack Query to cancel the request
     return api(`/library?${params.toString()}`, {
-        method: "GET",    
+        method: "GET",
         signal,
     })
 }

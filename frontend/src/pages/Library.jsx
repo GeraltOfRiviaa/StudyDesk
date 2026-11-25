@@ -1,4 +1,4 @@
-import { Search } from "@/components/ui/searches/search"
+import { Search } from "@/components/searches/Search"
 import { BulkActionsButton } from "@/components/buttons/BulkActionsButton"
 import { ItemTypesButton } from "@/components/buttons/ItemTypesButton"
 import { Switch } from "@/components/ui/switch"
@@ -18,6 +18,7 @@ import { useUser } from "@/context/AuthContext"
 import { useItemModal } from "@/context/ItemsModalContext"
 import { useLibraryFilters } from "@/hooks/useLibraryFilters"
 import { useLibrary } from "@/hooks/useLibrary"
+import { useDebounce } from "@/hooks/useDebounce"
 
 function Library() {
     const [selected, setSelected] = useState(new Set())
@@ -30,17 +31,34 @@ function Library() {
     // Read filters from URL
     const { filters, setFilter, resetFilters } = useLibraryFilters()
 
+    // Update the URL immediately, but debounce the API search
+    const debouncedSearch = useDebounce(filters.q, 300)
+    const isSearchPending = filters.q !== debouncedSearch
+
+    const handleFilterChange = (key, value) => {
+        setSelected(new Set())
+        setFilter(key, value)
+    }
+
+    const handleResetFilters = () => {
+        setSelected(new Set())
+        resetFilters()
+    }
+
     // Fetch Library items
     const {
         items,
         isLoading,
-        isError,
         error,
         hasNextPage,
         fetchNextPage,
         isFetchingNextPage,
         refetch,
-    } = useLibrary(filters)
+    } = useLibrary({
+        ...filters,
+        q: debouncedSearch,
+        tags: filters.match === "none" ? [] : filters.tags,
+    })
 
     // Fetch tags separately
     const tagsQuery = useQuery({
@@ -54,7 +72,7 @@ function Library() {
     // Determine which data should currently be displayed
     const displayedItems = itemsMode ? items : tags
     const loading = itemsMode
-        ? isLoading || tagsQuery.isLoading
+        ? isSearchPending || isLoading || tagsQuery.isLoading
         : tagsQuery.isLoading
 
     const displayError = itemsMode
@@ -150,7 +168,7 @@ function Library() {
     }
 
     // Convert selection keys into objects for bulk deletion
-    const selectedItems = [...selected].map(key => {
+    const selectedItems = displayedKeys.filter(key => selected.has(key)).map(key => {
         const [type, id] = key.split(":")
         return { type, id }
     })
@@ -166,21 +184,47 @@ function Library() {
                     Library
                 </h1>
 
-                <Search />
+                {itemsMode && (
+                    <Search
+                        value={filters.q}
+                        onChange={value => handleFilterChange("q", value)}
+                        placeholder="Search by title..."
+                    />
+                )}
 
                 <div className="flex flex-row justify-between">
                     <div className="flex flex-row gap-2 my-auto">
                         <BulkActionsButton
                             type="button"
                             size="sm"
-                            selected={selectedItems}
+                            selected={loading || displayError ? [] : selectedItems}
                             onDeleted={handleDeleted}
                         />
 
-                        <ItemTypesButton size="sm" />
+                        {itemsMode && (
+                            <ItemTypesButton
+                                size="sm"
+                                value={filters.collections}
+                                onChange={value => handleFilterChange("collections", value)}
+                            />
+                        )}
                     </div>
 
-                    <FilterButton size="sm" />
+                    {itemsMode && (
+                        <FilterButton
+                            size="sm"
+                            tags={tags}
+                            selectedTags={filters.match === "none" ? [] : filters.tags}
+                            match={filters.match}
+                            sort={filters.sort}
+                            order={filters.order}
+                            onTagsChange={value => handleFilterChange("tags", value)}
+                            onMatchChange={value => handleFilterChange("match", value)}
+                            onSortChange={value => handleFilterChange("sort", value)}
+                            onOrderChange={value => handleFilterChange("order", value)}
+                            onReset={handleResetFilters}
+                        />
+                    )}
                 </div>
             </div>
 
@@ -193,6 +237,7 @@ function Library() {
                         <div className="flex min-w-0 items-center gap-2">
                             <Checkbox
                                 checked={someSelected ? "indeterminate" : allSelected}
+                                disabled={loading || !!displayError}
                                 onCheckedChange={toggleAll}
                             />
                             <p className="text-lg">Title</p>
@@ -207,6 +252,7 @@ function Library() {
                         <div className="flex min-w-0 items-center gap-2">
                             <Checkbox
                                 checked={someSelected ? "indeterminate" : allSelected}
+                                disabled={loading || !!displayError}
                                 onCheckedChange={toggleAll}
                             />
                             <p className="text-lg">Title</p>
@@ -284,7 +330,7 @@ function Library() {
                     )}
 
                     {/* Temporary pagination control */}
-                    {itemsMode && hasNextPage && !displayError && (
+                    {itemsMode && hasNextPage && !loading && !displayError && (
                         <div className="flex justify-center p-4">
                             <Button
                                 variant="outline"

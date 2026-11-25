@@ -26,7 +26,7 @@ CI = Collation(locale="en", strength=2)
 # Used when later looking through the whole database 
 # if those tags exist in those collections
 TAG_REFS = [
-    ("notes", "tags"), ("archive", "tags"), ("events", "tags"),
+    ("notes", "tags"), ("files", "tags"), ("events", "tags"),
     ("forms", "tags"), ("containers", "filter_tags"),
 ]
 

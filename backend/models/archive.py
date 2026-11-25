@@ -5,18 +5,18 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from models.types import FileName, FileSizeLimit, PyObjectId, StoragePath, Tags, Title, UpdateModel
 
 
-class ArchiveBase(BaseModel):
+class FilesBase(BaseModel):
     title: Title
     tags: Tags = Field(default_factory=list)
     
-class ArchiveCreate(ArchiveBase):
+class FilesCreate(FilesBase):
     model_config = ConfigDict(extra="forbid")
     
-class ArchiveUpdate(UpdateModel):
+class FilesUpdate(UpdateModel):
     title: Title | None = None
     tags: Tags | None = None
 
-class ArchiveDB(ArchiveBase):
+class FilesDB(FilesBase):
     id: PyObjectId
     user_id: PyObjectId
     filename: FileName

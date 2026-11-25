@@ -20,7 +20,7 @@ def _no_duplicates(v: list) -> list:
 
 class TypesEnum(str, Enum):
     note = "note"
-    archive = "archive"
+    file = "files"
     event = "event"
     form = "form"
 
