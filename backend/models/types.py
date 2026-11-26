@@ -20,7 +20,7 @@ def _no_duplicates(v: list) -> list:
 
 class TypesEnum(str, Enum):
     note = "note"
-    file = "files"
+    file = "file"
     event = "event"
     form = "form"
 
@@ -106,7 +106,7 @@ class TokenData(BaseModel):
 
 class TableItem(BaseModel):
     id: PyObjectId
-    type: Literal["note", "form", "event", "file"]
+    type: TypesEnum
     title: Title
     tags: Tags
     created_at: AwareDatetime

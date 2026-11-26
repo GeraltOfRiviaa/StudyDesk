@@ -22,58 +22,6 @@ tags_collection = db["tags"]
 # case-insensitive name matching ("Math" == "math")
 CI = Collation(locale="en", strength=2)
 
-# Collections holding tag ids: (collection, field)
-# Used when later looking through the whole database 
-# if those tags exist in those collections
-TAG_REFS = [
-    ("notes", "tags"), ("files", "tags"), ("events", "tags"),
-    ("forms", "tags"), ("containers", "filter_tags"),
-]
-
-
-########################################################
-
-def to_tag(doc: dict) -> TagPublic:
-    return TagPublic(
-        id=str(doc["_id"]), 
-        name=doc["name"], 
-        color=doc["color"],
-        created_at=doc["created_at"], 
-        updated_at=doc["updated_at"],
-    )
-    
-
-########################################################
-
-# F3 - helper (not a route): call before saving an item/container with tags.
-# Returns deduplicated ObjectIds, raises 400 if any doesn't exist / isn't the user's.
-
-async def validate_tag_ids(user_id: str, tag_ids: Tags) -> Tags:
-    ids = list({ObjectId(t) for t in tag_ids})
-    if not ids:
-        return []
-    count = await tags_collection.count_documents(
-        {"_id": {"$in": ids}, "user_id": ObjectId(user_id)}
-    )
-    if count != len(ids):
-        raise HTTPException(status_code=400, detail="Invalid tag ids")
-    return tag_ids
-
-
-########################################################
-
-# Usage count (helper)
-
-async def count_usage(uid: ObjectId, tids: list[ObjectId]) -> dict[str, int]:
-    result = {}
-
-    for coll, field in TAG_REFS:
-        count = await db[coll].count_documents({"user_id": uid, field: {"$in": tids}})
-        result[coll] = count
-
-    return result
-
-########################################################
 
 # F1 - get all user's tags
 

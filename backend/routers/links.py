@@ -11,20 +11,14 @@ from models.users import UserPublic
 from models.types import PyObjectId, TypesEnum
 from database import db
 from core.security import get_current_user
+from core.links import item_links_query
 
 import re
+from core.collections import ITEM_COLLECTIONS
 
 
 router = APIRouter(prefix="/links", tags=["Links"])
 links_collection = db["links"]
-
-# Map TypesEnum values to MongoDB collections
-ITEM_COLLECTIONS = {
-    TypesEnum.note: "notes",
-    TypesEnum.files: "files",
-    TypesEnum.event: "events",
-    TypesEnum.form: "forms",
-}
 
 ########################################################
 
@@ -107,49 +101,6 @@ async def link_exists(user_id: str, link: LinkBase) -> bool:
 
     return result is not None
 
-
-########################################################
-
-
-# Helper - find links connected to a particular item
-# check on both sides 
-
-def item_links_query(
-    user_id: str,
-    item_type: TypesEnum,
-    item_id: PyObjectId,
-) -> dict:
-    return {
-        "user_id": ObjectId(user_id),
-        "$or": [
-            {
-                "item_a_id": ObjectId(item_id),
-                "item_a_type": item_type.value,
-            },
-            {
-                "item_b_id": ObjectId(item_id),
-                "item_b_type": item_type.value,
-            },
-        ],
-    }
-
-
-########################################################
-
-
-# Helper - delete all links associated with an item
-# Call this from the item's DELETE route
-
-async def delete_item_links(
-    user_id: str,
-    item_type: TypesEnum,
-    item_id: PyObjectId,
-):
-    result = await links_collection.delete_many(
-        item_links_query(user_id, item_type, item_id)
-    )
-
-    return result.deleted_count
 
 
 ########################################################

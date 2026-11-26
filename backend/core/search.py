@@ -12,12 +12,7 @@ from database import db
 import base64
 from bson import json_util
 
-ALLOWED_COLLECTIONS = {
-    "notes": "note",
-    "forms": "form",
-    "events": "event",
-    "files": "file",
-}
+from core.collections import ALLOWED_COLLECTIONS
 
 # We use cursor based pagination, meaning we load 30 items and after that 
 # we wait for the user to scroll. After that we load 30 more items and like that

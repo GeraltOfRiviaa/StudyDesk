@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query
-from routers.tags import validate_tag_ids
+from core.tags import validate_tag_ids
 from models.note import NoteCreate,  NoteUpdate, NoteListItem, NotePublic
 from models.users import  UserPublic
 from database import db

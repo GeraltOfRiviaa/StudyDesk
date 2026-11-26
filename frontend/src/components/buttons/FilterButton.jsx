@@ -85,8 +85,9 @@ export function FilterButton({
                                         checked={selectedTags.includes(tag.id)}
                                         disabled={match === "none"}
                                         onCheckedChange={() => toggleTag(tag.id)}
+                                        className="text-white"
                                     >
-                                        {tag.title}
+                                        {tag.name}
                                     </DropdownMenuCheckboxItem>
                                 ))
                             )}

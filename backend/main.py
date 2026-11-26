@@ -9,6 +9,7 @@ from models.users import UserPublic
 from models.types import PyObjectId, Title, PaginatedItems
 from routers import users, notes, tags, links
 from core.security import get_current_user
+from routers import users, notes, tags, links, bulk
 
 
 app = FastAPI(
@@ -19,6 +20,7 @@ app.include_router(users.router)
 app.include_router(notes.router)
 app.include_router(tags.router)
 app.include_router(links.router)
+app.include_router(bulk.router)
 
 app.add_middleware(
     CORSMiddleware,
