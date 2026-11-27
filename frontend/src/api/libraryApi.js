@@ -48,3 +48,11 @@ export async function fetchLibrary({
         signal,
     })
 }
+
+export function fetchLibraryTags({ q, sort, order, cursor, signal }) {
+    const params = new URLSearchParams({ sort, order })
+    if (q) params.set("q", q)
+    if (cursor) params.set("cursor", cursor)
+
+    return api(`/tags/library?${params}`, { signal })
+}

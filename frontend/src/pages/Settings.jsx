@@ -10,7 +10,7 @@ import { UpdateUserSchema } from '../schemas'
 import { api } from '@/api/client'
 import { toast } from "@/components/ui/toast"
 import { useUser} from "@/context/AuthContext"
-import { useState } from 'react'
+import { DeleteAccountButton } from "@/components/settings/DeleteAccountButton"
 
 function Settings() {
     const { user, refreshUser } = useUser()
@@ -49,56 +49,58 @@ function Settings() {
     }
 
     return (
-        <form id="settings-mobile" onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col px-4 py-6 max-w-100 lg:max-w-150 mx-auto">
-            <Controller
-                name="username"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                    <div className="flex flex-col my-2 gap-3 justify-between">
-                        <p className="font-semibold text-xl">Username</p>
-                        <InputGroup>
-                            <InputGroupInput
-                                {...field}
-                                placeholder={user.username}
-                                autoComplete="username"
-                                aria-invalid={fieldState.invalid} />
-                        </InputGroup>
-                        {fieldState.invalid && (
-                            <p className="text-sm text-destructive">
-                                {fieldState.error?.message}</p>
-                        )}
-                    </div>
-                )}
-            />
+        <div className="flex flex-col px-4 py-6 max-w-100 lg:max-w-150 mx-auto">
+            <form id="settings-mobile" onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col">
+                <Controller
+                    name="username"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                        <div className="flex flex-col my-2 gap-3 justify-between">
+                            <p className="font-semibold text-xl">Username</p>
+                            <InputGroup>
+                                <InputGroupInput
+                                    {...field}
+                                    placeholder={user.username}
+                                    autoComplete="username"
+                                    aria-invalid={fieldState.invalid} />
+                            </InputGroup>
+                            {fieldState.invalid && (
+                                <p className="text-sm text-destructive">
+                                    {fieldState.error?.message}</p>
+                            )}
+                        </div>
+                    )}
+                />
 
 
-            <Controller
-                name="email"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                    <div className="flex flex-col my-2 gap-3 justify-between">
-                        <p className="font-semibold text-xl">Email</p>
-                        <InputGroup>
-                            <InputGroupInput
-                                {...field}
-                                placeholder={user.email}
-                                autoComplete="email"
-                                aria-invalid={fieldState.invalid} />
-                        </InputGroup>
-                        {fieldState.invalid && (
-                            <p className="text-sm text-destructive">
-                                {fieldState.error?.message}</p>
-                        )}
-                    </div>
-                )}
-            />
-            
+                <Controller
+                    name="email"
+                    control={form.control}
+                    render={({ field, fieldState }) => (
+                        <div className="flex flex-col my-2 gap-3 justify-between">
+                            <p className="font-semibold text-xl">Email</p>
+                            <InputGroup>
+                                <InputGroupInput
+                                    {...field}
+                                    placeholder={user.email}
+                                    autoComplete="email"
+                                    aria-invalid={fieldState.invalid} />
+                            </InputGroup>
+                            {fieldState.invalid && (
+                                <p className="text-sm text-destructive">
+                                    {fieldState.error?.message}</p>
+                            )}
+                        </div>
+                    )}
+                />
+            </form>
+
             <div className="flex flex-row justify-between mt-4 ">
-                <Button variant="default" size="sm" className="rounded-md" type="submit">Save</Button>
+                <Button variant="default" size="sm" className="rounded-md" type="submit" form="settings-mobile">Save</Button>
                 <Button variant="outline" size="sm" className="rounded-md" type="button" onClick={changePassword}>Change password</Button>
-                <Button variant="destructive" size="sm" className="rounded-md" type="button" >Delete account</Button>
+                <DeleteAccountButton />
             </div>
-        </form>
+        </div>
     )
 }
 

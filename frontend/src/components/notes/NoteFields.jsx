@@ -1,6 +1,5 @@
 import {
     Field,
-    FieldGroup,
     FieldLabel,
     FieldError,
 } from "@/components/ui/field";
@@ -8,17 +7,15 @@ import {
 import { Controller } from "react-hook-form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { TagSelector } from "@/components/tags/TagSelector";
-import { LinkSelector } from "../links/LinkSelector";
 
 // Reusable fields for creating and updating notes
-export function NoteFields({ form, prefix, noteId = null }) {
+export function NoteFields({ control, prefix }) {
 
     return (
-        <FieldGroup>
+        <>
             <Controller
                 name="title"
-                control={form.control}
+                control={control}
                 render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
                         <FieldLabel htmlFor={`${prefix}-title`} className="text-lg">
@@ -42,7 +39,7 @@ export function NoteFields({ form, prefix, noteId = null }) {
 
             <Controller
                 name="content"
-                control={form.control}
+                control={control}
                 render={({ field, fieldState }) => (
                     <Field data-invalid={fieldState.invalid}>
                         <FieldLabel htmlFor={`${prefix}-content`} className="text-lg">
@@ -64,50 +61,6 @@ export function NoteFields({ form, prefix, noteId = null }) {
                 )}
             />
 
-            <Controller
-                name="tags"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid}>
-                        <FieldLabel className="text-lg">Tags</FieldLabel>
-
-                        <TagSelector
-                            value={field.value ?? []}
-                            onChange={field.onChange}
-                        />
-
-                        {fieldState.invalid && (
-                            <FieldError errors={[fieldState.error]} />
-                        )}
-                    </Field>
-                )}
-            />
-
-
-
-            <Controller
-                name="links"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                    <Field data-invalid={fieldState.invalid}>
-                        <FieldLabel className="text-lg">
-                            Links
-                        </FieldLabel>
-
-                        <LinkSelector
-                            value={field.value ?? []}
-                            onChange={field.onChange}
-                            sourceType={noteId ? "note" : null}
-                            sourceId={noteId}
-                        />
-
-                        {fieldState.invalid && (
-                            <FieldError errors={[fieldState.error]} />
-                        )}
-                    </Field>
-                )}
-            />
-
-        </FieldGroup>
+        </>
     );
 }

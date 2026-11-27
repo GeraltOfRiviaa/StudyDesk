@@ -1,31 +1,29 @@
 import { useInfiniteQuery } from "@tanstack/react-query"
 import { useUser } from "@/context/AuthContext"
-import { fetchLibrary } from "@/api/libraryApi"
+import { fetchLibrary, fetchLibraryTags } from "@/api/libraryApi"
 
-export function useLibrary(filters = {}) {
+export function useLibrary(filters = {}, enabled = true) {
     const { user } = useUser()
 
+    return useLibraryPages(["library", user?.id, filters], fetchLibrary, filters, enabled && !!user?.id)
+}
+
+export function useLibraryTags(filters, enabled) {
+    const { user } = useUser()
+
+    return useLibraryPages(["tags", user?.id, "library", filters], fetchLibraryTags, filters, enabled && !!user?.id)
+}
+
+function useLibraryPages(queryKey, fetchPage, filters, enabled) {
     const query = useInfiniteQuery({
-        queryKey: ["library", user?.id, filters],
-
-        //calls function to retrieve items
-        queryFn: ({ pageParam, signal }) =>
-            fetchLibrary({
-                ...filters,
-                cursor: pageParam,
-                signal,
-            }),
-
-        //start fetching without cursor
+        queryKey,
+        queryFn: ({ pageParam, signal }) => fetchPage({ ...filters, cursor: pageParam, signal }),
         initialPageParam: null,
-
-        //gets the next cursor from the backend response.
         getNextPageParam: (lastPage) =>
             lastPage.has_more
                 ? lastPage.next_cursor
                 : undefined,
-        //do not fetch if user not authenticated
-        enabled: !!user?.id,
+        enabled,
     })
 
     const items = query.data?.pages.flatMap(page => page.items) ?? []

@@ -1,24 +1,19 @@
-import {
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
-
-import { Button } from "@/components/ui/button";
-
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { UpdateNoteSchema } from "@/schemas";
 import { api } from "@/api/client";
 import { toast } from "@/components/ui/toast";
-import { NoteFields } from "@/components/notes/NoteFields"
+import { NoteFields } from "@/components/notes/NoteFields";
+import { ItemModalLayout } from "@/components/items/shared/ItemModalLayout";
+import { ItemModalHeader } from "@/components/items/shared/ItemModalHeader";
+import { ItemModalFooter } from "@/components/items/shared/ItemModalFooter";
+import { ItemRelationsFields } from "@/components/items/shared/ItemRelationsFields";
+import { FieldGroup } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 import Markdown from "react-markdown";
 import { useState, useEffect, useRef } from "react";
-import { TagBadge } from "@/components/tags/TagBadge";
 import { useItemModal } from "@/context/ItemsModalContext";
 import { syncItemLinks } from "@/api/linkApi";
-import { LinkBadge } from "@/components/links/LinkTagBadge";
 import { deleteWithToast } from "@/utils/deleteWithToast";
 import { useTagLookup } from "@/hooks/useTagLookup";
 
@@ -35,18 +30,20 @@ export function UpdateNote({
     const allowNavigation = useRef(false);
     const { registerNavigationGuard } = useItemModal();
 
+    // Use the fields from when this note opened to initialize the form once its links arrive.
+    const [defaultValues] = useState(() => ({
+        title: note.title ?? "",
+        content: note.content ?? "",
+        tags: note.tags ?? [],
+        links: note.links ?? [],
+    }));
     const form = useForm({
         resolver: zodResolver(UpdateNoteSchema),
-        defaultValues: {
-            title: note.title ?? "",
-            content: note.content ?? "",
-            tags: note.tags ?? [],
-            links: note.links ?? [],
-        },
+        defaultValues,
     });
 
-    const selectedTags = form.watch("tags") ?? [];
-
+    const selectedTags = useWatch({ control: form.control, name: "tags" }) ?? [];
+    const selectedLinks = useWatch({ control: form.control, name: "links" }) ?? [];
     const noteTags = useTagLookup(selectedTags);
 
     const { reset } = form;
@@ -59,30 +56,23 @@ export function UpdateNote({
 
     // The notes endpoint does not include links; fetch them separately.
     useEffect(() => {
-        let active = true;
-        setLinksLoading(true);
-        setLinksError(null);
+        const controller = new AbortController();
 
-        api(`/links/note/${note.id}`)
+        api(`/links/note/${note.id}`, { signal: controller.signal })
             .then(links => {
-                if (!active) return;
-                reset({
-                    title: note.title ?? "",
-                    content: note.content ?? "",
-                    tags: note.tags ?? [],
-                    links,
-                });
+                if (controller.signal.aborted) return;
+                reset({ ...defaultValues, links });
                 setLinksLoading(false);
             })
             .catch(error => {
-                if (!active) return;
+                if (controller.signal.aborted) return;
                 console.error("Could not load note links", error);
                 setLinksError("Could not load links. Try reopening the note.");
                 setLinksLoading(false);
             });
 
-        return () => { active = false; };
-    }, [note.id, reset]);
+        return () => controller.abort();
+    }, [note.id, defaultValues, reset]);
 
     async function onSubmit(data) {
         if (linksLoading || linksError) return;
@@ -128,7 +118,6 @@ export function UpdateNote({
         onClose?.();
     }
 
-    
     const handleDelete = async () => {
         await deleteWithToast("note", note.id)
         onDeleted?.()
@@ -136,78 +125,46 @@ export function UpdateNote({
     }
 
     return (
-        <div className="flex min-h-0 flex-col">
-            <DialogHeader className="shrink-0 bg-transparent pb-3 gap-0">
-                <DialogTitle className="flex text-2xl">
-                    {note.title}
-                </DialogTitle>
-
-                <div className="flex flex-wrap flex-col gap-1">
-                    <div className="flex flex-wrap flex-row gap-1">
-                        {noteTags.map(tag => (
-                            <TagBadge key={tag.id} tag={tag} />
-                        ))}
-                    </div>
-
-                    <div className="flex flex-wrap flex-row gap-1">
-                        {(form.watch("links") ?? []).map(link => (
-                            <LinkBadge
-                                key={`${link.item_type}-${link.item_id}`}
-                                link={link}
+        <form onSubmit={event => form.handleSubmit(onSubmit)(event)} className="flex min-h-0 flex-1 flex-col">
+            <ItemModalLayout
+                header={
+                    <ItemModalHeader title={note.title} tags={noteTags} links={selectedLinks} titleClassName="text-2xl">
+                        <label className="flex shrink-0 items-center gap-2">
+                            <Switch
+                                name="note-view-mode"
+                                checked={viewMode}
+                                onCheckedChange={setViewMode}
                             />
-                        ))}
-                    </div>
-                </div>
-
-            </DialogHeader>
-
-            <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="flex min-h-0 flex-1 flex-col gap-4"
+                            View
+                        </label>
+                    </ItemModalHeader>
+                }
+                footer={
+                    <ItemModalFooter
+                        className="flex-row justify-start sm:justify-start"
+                        submitLabel={viewMode ? undefined : "Save changes"}
+                        submitDisabled={form.formState.isSubmitting || linksLoading || !!linksError}
+                        onDelete={handleDelete}
+                        onCancel={onClose}
+                    />
+                }
             >
-                <div className="min-h-0 flex-1 overflow-y-auto">
-                    {viewMode ? (
-                        <div className="flex flex-col">
-                            <div className="prose prose-sm max-w-none dark:prose-invert">
-                                <Markdown>{note.content}</Markdown>
-                            </div>
-                        </div>
-                    ) : linksLoading ? (
-                        <p>Loading links...</p>
-                    ) : linksError ? (
-                        <p role="alert">{linksError}</p>
-                    ) : (
-                        <NoteFields form={form} prefix="edit-note" noteId={note.id} />
-                    )}
-                </div>
-
-                <DialogFooter className="shrink-0 border-t pt-3 sm:justify-between">
-
-                    <div className="flex gap-2">
-                        {!viewMode && (
-                            <Button type="submit" size="sm" disabled={form.formState.isSubmitting || linksLoading || !!linksError}>
-                                Save changes
-                            </Button>
-                        )}
-                        <Button type="button" size="sm" variant="destructive" onClick={handleDelete}>
-                            Delete
-                        </Button>
-                        <Button type="button" size="sm" variant="outline" onClick={onClose}>
-                            Cancel
-                        </Button>
+                {viewMode ? (
+                    <div className="prose prose-sm max-w-none dark:prose-invert">
+                        <Markdown>{note.content}</Markdown>
                     </div>
-
-                    <div className="flex flex-row gap-2 pt-2">
-                        <Switch
-                            name="note-view-mode"
-                            checked={viewMode}
-                            onCheckedChange={setViewMode}
-                        />
-                        <p>View</p>
-                    </div>
-                </DialogFooter>
-            </form>
-        </div>
+                ) : linksLoading ? (
+                    <p>Loading links...</p>
+                ) : linksError ? (
+                    <p role="alert">{linksError}</p>
+                ) : (
+                    <FieldGroup>
+                        <NoteFields control={form.control} prefix="edit-note" />
+                        <ItemRelationsFields control={form.control} sourceType="note" sourceId={note.id} />
+                    </FieldGroup>
+                )}
+            </ItemModalLayout>
+        </form>
     );
 }
 

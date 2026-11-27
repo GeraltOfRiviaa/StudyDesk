@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm, Controller } from "react-hook-form"
 import { EyeIcon, EyeOffIcon } from "lucide-react"
@@ -13,6 +13,7 @@ import { api } from "@/api/client"
 function Login() {
     const { refreshUser } = useUser()
     const navigate = useNavigate()
+    const { state } = useLocation()
     const [showPassword, setShowPassword] = useState(false)
 
     const form = useForm({
@@ -49,6 +50,9 @@ function Login() {
                 className="flex flex-col mx-auto my-auto w-screen px-20 max-w-100 sm:px-0 lg:max-w-80"
             >
                 <h1 className="font-bold text-4xl text-center py-10">Login</h1>
+                {state?.accountDeleted && (
+                    <p role="status" className="mb-3 text-center text-sm">Account deleted.</p>
+                )}
 
                 <Controller
                     name="username"

@@ -18,6 +18,11 @@ class TagPublic(TagBase):
     created_at: AwareDatetime
     updated_at: AwareDatetime
 
+class PaginatedTags(BaseModel):
+    items: list[TagPublic]
+    next_cursor: str | None = None
+    has_more: bool
+
 class TagUsage(BaseModel):
     total: int
     by_collection: dict[str, int]

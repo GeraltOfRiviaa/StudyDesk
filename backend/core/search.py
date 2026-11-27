@@ -27,7 +27,10 @@ def encode_cursor(doc, sort):
         "id": doc["_id"] # id of the item we stopped at
         # those last two are used for sorting values with the same date
     }
+    return encode_cursor_payload(data)
 
+
+def encode_cursor_payload(data: dict[str, Any]) -> str:
     # We need a string to pass into the URL safely so we 
     # create a json with the MongoDBs specific values,
     # convert it into bytes, 
@@ -38,11 +41,11 @@ def encode_cursor(doc, sort):
     ).decode()
 
 
-def decode_cursor(cursor):
+def decode_cursor(cursor, *, validate=False):
     try:
         # return the string into the dictioary
         return json_util.loads(
-            base64.urlsafe_b64decode(cursor).decode()
+            base64.b64decode(cursor, altchars=b"-_", validate=validate).decode()
         )
     except Exception:
         raise HTTPException(

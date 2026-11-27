@@ -8,7 +8,7 @@ from core.tags import validate_tag_ids
 from models.note import NoteCreate,  NoteUpdate, NoteListItem, NotePublic
 from models.users import  UserPublic
 from database import db
-from core.security import get_current_user
+from core.security import get_account_writer, get_current_user
 from typing import Annotated, Literal
 from models.types import PyObjectId, Title, TypesEnum
 from pymongo import ReturnDocument
@@ -24,7 +24,7 @@ notes_collection = db["notes"]
 # Create note
 
 @router.post(path='/', status_code=201)
-async def create_note(note: NoteCreate, user: UserPublic = Depends(get_current_user)):
+async def create_note(note: NoteCreate, user: UserPublic = Depends(get_account_writer)):
     uid = ObjectId(user.id)
     now = datetime.now(timezone.utc) 
     await validate_tag_ids(user.id, note.tags)

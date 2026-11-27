@@ -7,7 +7,7 @@ import { AddItemButton } from "@/components/buttons/AddItemsButton"
 import { Spinner } from "@/components/ui/spinner"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
-import { NoteRow } from "@/components/notes/NoteRow"
+import { LibraryRow } from "@/components/library/LibraryRow"
 import { TagRow } from "@/components/tags/TagRows"
 
 import { useEffect, useState } from "react"
@@ -17,9 +17,18 @@ import { api } from "@/api/client"
 import { useUser } from "@/context/AuthContext"
 import { useItemModal } from "@/context/ItemsModalContext"
 import { useLibraryFilters } from "@/hooks/useLibraryFilters"
-import { useLibrary } from "@/hooks/useLibrary"
+import { useLibrary, useLibraryTags } from "@/hooks/useLibrary"
 import { useDebounce } from "@/hooks/useDebounce"
 import { useTagLookup } from "@/hooks/useTagLookup"
+import { ITEM_TYPES } from "@/lib/itemTypes"
+
+const itemCreateOptions = Object.values(ITEM_TYPES).map(({ type, label }) => ({
+    type,
+    label,
+    disabled: type !== ITEM_TYPES.note.type,
+}))
+
+const tagCreateOptions = [{ type: "tag", label: "Tag" }]
 
 function Library() {
     const [selected, setSelected] = useState(new Set())
@@ -43,49 +52,50 @@ function Library() {
 
     const handleResetFilters = () => {
         setSelected(new Set())
-        resetFilters()
+        resetFilters({ preserveItemFilters: !itemsMode })
     }
 
-    // Fetch Library items
+    const itemsQuery = useLibrary({
+        ...filters,
+        q: debouncedSearch,
+        tags: filters.match === "none" ? [] : filters.tags,
+    }, itemsMode)
+
+    const tagSort = ["title", "created_at", "updated_at"].includes(filters.sort)
+        ? filters.sort
+        : "updated_at"
+    const libraryTagsQuery = useLibraryTags({
+        q: debouncedSearch.trim(),
+        sort: tagSort === "title" ? "name" : tagSort,
+        order: filters.order,
+    }, !itemsMode)
+
+    const pickerTagsQuery = useQuery({
+        queryKey: ["tags", user?.id],
+        queryFn: ({ signal }) => api("/tags/", { signal }),
+        enabled: itemsMode && !!user?.id,
+    })
+
+    const pickerTags = pickerTagsQuery.data ?? []
+    const listedTagIds = new Set(pickerTags.map(tag => tag.id))
+    const missingItemTagIds = itemsMode && pickerTagsQuery.isSuccess
+        ? itemsQuery.items.flatMap(item => item.tags ?? [])
+            .filter(id => !listedTagIds.has(id))
+        : []
+    const extraTags = useTagLookup(missingItemTagIds)
+    const itemTags = [...pickerTags, ...extraTags]
+
     const {
-        items,
+        items: displayedItems,
         isLoading,
         error,
         hasNextPage,
         fetchNextPage,
         isFetchingNextPage,
         refetch,
-    } = useLibrary({
-        ...filters,
-        q: debouncedSearch,
-        tags: filters.match === "none" ? [] : filters.tags,
-    })
-
-    // Fetch tags separately
-    const tagsQuery = useQuery({
-        queryKey: ["tags", user?.id],
-        queryFn: ({ signal }) => api("/tags/", { signal }),
-        enabled: !!user?.id,
-    })
-
-    const tags = tagsQuery.data ?? []
-    const listedTagIds = new Set(tags.map(tag => tag.id))
-    const missingNoteTagIds = itemsMode && tagsQuery.isSuccess
-        ? items.flatMap(item => item.type === "note" ? item.tags ?? [] : [])
-            .filter(id => !listedTagIds.has(id))
-        : []
-    const extraTags = useTagLookup(missingNoteTagIds)
-    const noteTags = [...tags, ...extraTags]
-
-    // Determine which data should currently be displayed
-    const displayedItems = itemsMode ? items : tags
-    const loading = itemsMode
-        ? isSearchPending || isLoading || tagsQuery.isLoading
-        : tagsQuery.isLoading
-
-    const displayError = itemsMode
-        ? error || tagsQuery.error
-        : tagsQuery.error
+    } = itemsMode ? itemsQuery : libraryTagsQuery
+    const loading = isSearchPending || isLoading || (itemsMode && pickerTagsQuery.isLoading)
+    const displayError = error || (itemsMode && pickerTagsQuery.error)
 
     // Refresh cached data when an item changes
     useEffect(() => {
@@ -157,18 +167,6 @@ function Library() {
         ])
     }
 
-    // Update tags stored in the query cache
-    const handleTagUpdated = (updatedTag) => {
-        queryClient.setQueryData(
-            ["tags", user?.id],
-            prev => prev?.map(tag =>
-                tag.id === updatedTag.id
-                    ? { ...tag, ...updatedTag }
-                    : tag
-            )
-        )
-    }
-
     // Switch between items and tags
     const handleLibrarySwitch = () => {
         setSelected(new Set())
@@ -192,13 +190,12 @@ function Library() {
                     Library
                 </h1>
 
-                {itemsMode && (
-                    <Search
-                        value={filters.q}
-                        onChange={value => handleFilterChange("q", value)}
-                        placeholder="Search by title..."
-                    />
-                )}
+                <Search
+                    value={filters.q}
+                    onChange={value => handleFilterChange("q", value)}
+                    placeholder={itemsMode ? "Search by title..." : "Search by name..."}
+                    maxLength={150}
+                />
 
                 <div className="flex flex-row justify-between">
                     <div className="flex flex-row gap-2 my-auto">
@@ -209,30 +206,28 @@ function Library() {
                             onDeleted={handleDeleted}
                         />
 
-                        {itemsMode && (
-                            <ItemTypesButton
-                                size="sm"
-                                value={filters.collections}
-                                onChange={value => handleFilterChange("collections", value)}
-                            />
-                        )}
+                        <ItemTypesButton
+                            size="sm"
+                            disabled={!itemsMode}
+                            value={filters.collections}
+                            onChange={value => handleFilterChange("collections", value)}
+                        />
                     </div>
 
-                    {itemsMode && (
-                        <FilterButton
-                            size="sm"
-                            tags={tags}
-                            selectedTags={filters.match === "none" ? [] : filters.tags}
-                            match={filters.match}
-                            sort={filters.sort}
-                            order={filters.order}
-                            onTagsChange={value => handleFilterChange("tags", value)}
-                            onMatchChange={value => handleFilterChange("match", value)}
-                            onSortChange={value => handleFilterChange("sort", value)}
-                            onOrderChange={value => handleFilterChange("order", value)}
-                            onReset={handleResetFilters}
-                        />
-                    )}
+                    <FilterButton
+                        size="sm"
+                        itemsMode={itemsMode}
+                        tags={pickerTags}
+                        selectedTags={filters.match === "none" ? [] : filters.tags}
+                        match={filters.match}
+                        sort={itemsMode ? filters.sort : tagSort}
+                        order={filters.order}
+                        onTagsChange={value => handleFilterChange("tags", value)}
+                        onMatchChange={value => handleFilterChange("match", value)}
+                        onSortChange={value => handleFilterChange("sort", value)}
+                        onOrderChange={value => handleFilterChange("order", value)}
+                        onReset={handleResetFilters}
+                    />
                 </div>
             </div>
 
@@ -244,7 +239,8 @@ function Library() {
                     <div className="grid grid-cols-[minmax(0,1fr)_7rem] md:grid-cols-[minmax(0,1fr)_11rem_7rem] lg:grid-cols-[minmax(0,1fr)_14rem_8rem_8rem] items-center gap-2 px-2 h-10 shrink-0 bg-card border-b">
                         <div className="flex min-w-0 items-center gap-2">
                             <Checkbox
-                                checked={someSelected ? "indeterminate" : allSelected}
+                                checked={allSelected}
+                                indeterminate={someSelected}
                                 disabled={loading || !!displayError}
                                 onCheckedChange={toggleAll}
                             />
@@ -259,11 +255,12 @@ function Library() {
                     <div className="grid grid-cols-[minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_7rem] md:grid-cols-[minmax(0,1fr)_8rem_8rem] items-center gap-2 px-2 h-10 shrink-0 bg-card border-b">
                         <div className="flex min-w-0 items-center gap-2">
                             <Checkbox
-                                checked={someSelected ? "indeterminate" : allSelected}
+                                checked={allSelected}
+                                indeterminate={someSelected}
                                 disabled={loading || !!displayError}
                                 onCheckedChange={toggleAll}
                             />
-                            <p className="text-lg">Title</p>
+                            <p className="text-lg">Name</p>
                         </div>
 
                         <p className="hidden sm:block">Created at</p>
@@ -284,8 +281,8 @@ function Library() {
                             <Button
                                 variant="outline"
                                 onClick={() => {
-                                    if (itemsMode) refetch()
-                                    tagsQuery.refetch()
+                                    refetch()
+                                    if (itemsMode) pickerTagsQuery.refetch()
                                 }}
                             >
                                 Retry
@@ -293,52 +290,30 @@ function Library() {
                         </div>
                     ) : displayedItems.length === 0 ? (
                         <div className="flex h-full flex-col items-center justify-center p-4 text-center">
-                            <p>No items found.</p>
+                            <p>{itemsMode ? "No items found." : "No tags found."}</p>
                         </div>
                     ) : itemsMode ? (
-                        items.map(item =>
-                            item.type === "note" ? (
-                                <NoteRow
-                                    key={`${item.type}:${item.id}`}
-                                    note={item}
-                                    tags={noteTags}
-                                    selected={selected}
-                                    onToggle={toggle}
-                                />
-                            ) : (
-                                <div
-                                    key={`${item.type}:${item.id}`}
-                                    className="flex items-center gap-2 p-2 border-b"
-                                >
-                                    <Checkbox
-                                        checked={selected.has(`${item.type}:${item.id}`)}
-                                        onCheckedChange={() => toggle(item.type, item.id)}
-                                    />
-
-                                    <button
-                                        className="text-left truncate"
-                                        onClick={() => openItem(item.type, item.id)}
-                                    >
-                                        {item.title}
-                                    </button>
-                                </div>
-                            )
-                        )
+                        displayedItems.map(item => (
+                            <LibraryRow
+                                key={`${item.type}:${item.id}`}
+                                item={item}
+                                tags={itemTags}
+                                selected={selected}
+                                onToggle={toggle}
+                            />
+                        ))
                     ) : (
-                        tags.map(tag => (
+                        displayedItems.map(tag => (
                             <TagRow
                                 key={tag.id}
                                 tag={tag}
                                 selected={selected}
                                 onToggle={toggle}
-                                onUpdated={handleTagUpdated}
-                                onFetchNewTags={tagsQuery.refetch}
                             />
                         ))
                     )}
 
-                    {/* Temporary pagination control */}
-                    {itemsMode && hasNextPage && !loading && !displayError && (
+                    {hasNextPage && !loading && !displayError && (
                         <div className="flex justify-center p-4">
                             <Button
                                 variant="outline"
@@ -368,12 +343,8 @@ function Library() {
 
                     <AddItemButton
                         size="sm"
-                        onSelectType={type =>
-                            openItem(type.toLowerCase(), null, "create")
-                        }
-                        items={itemsMode
-                            ? ["Note", "File", "Form", "Event"]
-                            : ["Tag"]}
+                        onSelectType={type => openItem(type, null, "create")}
+                        items={itemsMode ? itemCreateOptions : tagCreateOptions}
                     />
                 </div>
             </div>

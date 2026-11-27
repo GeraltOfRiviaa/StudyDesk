@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, AwareDatetime, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, AwareDatetime, Field, SecretStr, field_validator
 from models.types import Username, Password, PyObjectId, UpdateModel
 
 
@@ -22,6 +22,11 @@ class UserUpdate(UpdateModel):
 class UserChangePassword(UpdateModel):
     old_password: Password
     new_password: Password
+
+class UserDelete(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    password: SecretStr = Field(min_length=1)
+
 class UserDB(UserBase):
     id: PyObjectId
     password_hash: str
