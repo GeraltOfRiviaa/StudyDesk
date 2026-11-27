@@ -1,8 +1,8 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { Navbar } from './components/Navbar'
 import { Toaster } from "@/components/ui/toast"
-import { useUser } from '@/AuthContext'
-import { ThemeProvider } from "@/components/ThemeProvider"
+import { useUser } from '@/context/AuthContext'
+import { ThemeProvider } from "@/providers/ThemeProvider"
 
 const Layout = () => {
   const { user, loading } = useUser()

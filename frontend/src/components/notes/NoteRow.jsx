@@ -1,8 +1,8 @@
 import { Checkbox } from "@/components/ui/checkbox";
-import { TagBadge } from "../tags/TagBadge";
+import { TagBadge } from "@/components/tags/TagBadge";
 import { Badge } from "@/components/ui/badge";
-import { useItemModal } from "../ItemsModalContext";
-import { Button } from "../ui/button";
+import { useItemModal } from "@/context/ItemsModalContext";
+import { Button } from "@/components/ui/button";
 
 export function NoteRow({ note, selected, onToggle, tags }) {
     const { openItem } = useItemModal();
@@ -17,8 +17,8 @@ export function NoteRow({ note, selected, onToggle, tags }) {
             {/* Row uses the same columns as the Library header */}
             <div className="flex min-w-0 items-center gap-2">
                 <Checkbox
-                    checked={selected.has(note.id)}
-                    onCheckedChange={() => onToggle(note.id)}
+                    checked={selected.has(`note:${note.id}`)}
+                    onCheckedChange={() => onToggle("note", note.id)}
                 />
                 <Button
                     type="button"

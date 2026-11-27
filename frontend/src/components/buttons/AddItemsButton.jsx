@@ -1,11 +1,11 @@
 import { PlusIcon } from "lucide-react";
-import { Button } from "../button";
+import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
     DropdownMenuTrigger,
     DropdownMenuContent,
     DropdownMenuItem
-} from "../dropdown-menu";
+} from "@/components/ui/dropdown-menu";
 
 export function AddItemButton({ size, onSelectType, items }) {
     return (

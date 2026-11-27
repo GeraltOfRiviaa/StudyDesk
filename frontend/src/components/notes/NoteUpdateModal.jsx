@@ -9,16 +9,19 @@ import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { UpdateNoteSchema } from "@/schemas";
-import { api } from "@/api";
+import { api } from "@/api/client";
 import { toast } from "@/components/ui/toast";
 import { NoteFields } from "@/components/notes/NoteFields"
 import { Switch } from "@/components/ui/switch";
 import Markdown from "react-markdown";
 import { useState, useEffect, useRef } from "react";
 import { TagBadge } from "@/components/tags/TagBadge";
-import { useItemModal } from "@/components/ItemsModalContext";
-import { syncItemLinks } from "@/components/links/linkApi";
+import { useItemModal } from "@/context/ItemsModalContext";
+import { syncItemLinks } from "@/api/linkApi";
 import { LinkBadge } from "@/components/links/LinkTagBadge";
+import { deleteWithToast } from "@/utils/deleteWithToast";
+import { useTagLookup } from "@/hooks/useTagLookup";
+
 // UPDATE NOTE FORM
 export function UpdateNote({
     note,
@@ -27,27 +30,10 @@ export function UpdateNote({
     onDeleted
 }) {
     const [viewMode, setViewMode] = useState(true);
-    const [availableTags, setAvailableTags] = useState([]);
     const [linksLoading, setLinksLoading] = useState(true);
     const [linksError, setLinksError] = useState(null);
     const allowNavigation = useRef(false);
     const { registerNavigationGuard } = useItemModal();
-
-    useEffect(() => {
-        async function fetchTags() {
-            try {
-                const tags = await api("/tags/?limit=100");
-                setAvailableTags(tags);
-            } catch (error) {
-                console.error("Could not fetch tags", error);
-            }
-        }
-
-        fetchTags();
-    }, []);
-
-    
-
 
     const form = useForm({
         resolver: zodResolver(UpdateNoteSchema),
@@ -61,9 +47,7 @@ export function UpdateNote({
 
     const selectedTags = form.watch("tags") ?? [];
 
-    const noteTags = availableTags.filter(tag =>
-        selectedTags.includes(tag.id)
-    );
+    const noteTags = useTagLookup(selectedTags);
 
     const { reset } = form;
     const isDirty = form.formState.isDirty;
@@ -144,24 +128,11 @@ export function UpdateNote({
         onClose?.();
     }
 
-    const deleteItem = async () => {
-        try {
-            await api(`/notes/${note.id}`, { method: "DELETE" });
-
-            toast.add({
-                title: "Note deleted",
-                type: "success",
-            });
-            allowNavigation.current = true;
-            onDeleted?.(note.id);
-            onClose?.();
-        } catch {
-            toast.add({
-                title: "Could not delete the note",
-                description: "Try again later",
-                type: "error",
-            });
-        }
+    
+    const handleDelete = async () => {
+        await deleteWithToast("note", note.id)
+        onDeleted?.()
+        onClose?.()
     }
 
     return (
@@ -218,7 +189,7 @@ export function UpdateNote({
                                 Save changes
                             </Button>
                         )}
-                        <Button type="button" size="sm" variant="destructive" onClick={deleteItem}>
+                        <Button type="button" size="sm" variant="destructive" onClick={handleDelete}>
                             Delete
                         </Button>
                         <Button type="button" size="sm" variant="outline" onClick={onClose}>

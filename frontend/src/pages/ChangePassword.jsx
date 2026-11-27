@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { InputGroup, InputGroupInput } from "@/components/ui/input-group"
 import { toast } from "@/components/ui/toast"
 import { ChangePasswordSchema } from "@/schemas"
-import { api } from "@/api"
+import { api } from "@/api/client"
 
 const FIELDS = [
     { name: "oldPassword", label: "Current password", autoComplete: "current-password" },

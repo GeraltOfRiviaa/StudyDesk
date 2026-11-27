@@ -1,6 +1,6 @@
 from pydantic import  Field, BeforeValidator,  StringConstraints, AwareDatetime, AfterValidator, BaseModel, ConfigDict, model_validator
 from bson import ObjectId
-from typing import Annotated
+from typing import Annotated, Literal
 from enum import Enum
 
 
@@ -20,7 +20,7 @@ def _no_duplicates(v: list) -> list:
 
 class TypesEnum(str, Enum):
     note = "note"
-    archive = "archive"
+    file = "file"
     event = "event"
     form = "form"
 
@@ -103,3 +103,16 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: str | None = None
+
+class TableItem(BaseModel):
+    id: PyObjectId
+    type: TypesEnum
+    title: Title
+    tags: Tags
+    created_at: AwareDatetime
+    updated_at: AwareDatetime
+    
+class PaginatedItems(BaseModel):
+    items: list[TableItem]
+    next_cursor: str | None = None
+    has_more: bool

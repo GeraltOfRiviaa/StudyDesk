@@ -2,45 +2,23 @@ from datetime import datetime, timezone
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query
-from routers.tags import validate_tag_ids
+from core.links import delete_item_links
+from core.notes import to_note
+from core.tags import validate_tag_ids
 from models.note import NoteCreate,  NoteUpdate, NoteListItem, NotePublic
 from models.users import  UserPublic
 from database import db
 from core.security import get_current_user
-from typing import Annotated, Any, Literal
-from models.types import PyObjectId, Title
+from typing import Annotated, Literal
+from models.types import PyObjectId, Title, TypesEnum
 from pymongo import ReturnDocument
-import re
+from core.search import filtered_list
+
 
 router = APIRouter(prefix="/notes", tags=["Notes"])
 notes_collection = db["notes"]
 
-########################################################
 
-
-# Transfer note result from queries to NotePublic class
-
-def to_note(doc: dict) -> NotePublic:
-    return NotePublic(
-        id=str(doc["_id"]),
-        title=doc["title"],
-        content=str(doc["content"]),
-        tags=[str(t) for t in doc["tags"]],
-        created_at=doc["created_at"],
-        updated_at=doc["updated_at"],
-    )
-    
-def to_note_item(doc: dict) -> NoteListItem:
-    return NoteListItem(
-            id=str(doc["_id"]),
-            title=doc["title"],
-            tags=[str(t) for t in doc["tags"]],
-            created_at=doc["created_at"],
-            updated_at=doc["updated_at"],
-        )
-
-
-########################################################
 
 
 # Create note
@@ -92,52 +70,24 @@ async def filtered_list_notes(
     tags: Annotated[list[PyObjectId] | None, Query(max_length=100)] = None,
     match: Literal["none", "any", "all", "exact"] | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
-    skip: Annotated[int, Query(ge=0)] = 0,
+    cursor: str | None = None,
     sort: Literal["updated_at", "created_at", "title", "tags"] = "updated_at",
     order: Literal["asc", "desc"] = "desc",
     user: UserPublic = Depends(get_current_user),
 ):
-    query: dict[str, Any] = {"user_id": ObjectId(user.id)}
-    # ids handling (unchanged)
-    # tag validation + match branching goes here, before the find
-    
-    if ids:
-        query["_id"] = {"$in": [ObjectId(i) for i in set(ids)]}
-
-    if match == "none" and tags:
-        raise HTTPException(status_code=400, detail="tags not allowed with match=none")
-    if match in ("any", "all", "exact") and not tags:
-        raise HTTPException(status_code=400, detail="tags required for this match")
-    if tags and match is None:
-        match = "any"
-
-    # Convert the ids from str to ObjectId
-    # use set(tags) to remove duplicates
-    # if there are no tags then keep the tag_ids empty
-    tag_ids = [ObjectId(t) for t in set(tags)] if tags else []
-    if match == "none":
-        query["tags"] = []
-    elif match == "any":
-        query["tags"] = {"$in": tag_ids}
-    elif match == "all":
-        query["tags"] = {"$all": tag_ids}
-    elif match == "exact":
-        query["tags"] = {"$all": tag_ids, "$size": len(tag_ids)}
-        
-    if q:
-        query["title"] = {"$regex": re.escape(q), "$options": "i"}
-    
-    direction = 1 if order == "asc" else -1
-    docs = await (
-    notes_collection.find(query, {"content": 0})
-        .collation({"locale": "en"})
-        .sort([(sort, direction), ("_id", direction)])
-        .skip(skip)
-        .limit(limit)
-        .to_list(length=limit)
-    )
-        
-    return [to_note_item(d) for d in docs]
+    result =  await filtered_list(
+            user_id=user.id,
+            collections=["notes"],
+            q=q,
+            ids=ids,
+            tags=tags,
+            match=match,
+            limit=limit,
+            cursor=cursor,
+            sort=sort,
+            order=order
+        )
+    return result.items
 
 
 ########################################################
@@ -174,13 +124,28 @@ async def update_note(note_id: PyObjectId, data: NoteUpdate, user: UserPublic = 
 
 # Delete a note
 
-@router.delete(path='/{note_id}', status_code=200)
-async def delete_note(note_id: PyObjectId, user: UserPublic = Depends(get_current_user)):
-    
-    result = await notes_collection.delete_one({"_id": ObjectId(note_id), "user_id": ObjectId(user.id)})
-    
+@router.delete("/{note_id}", status_code=200)
+async def delete_note(
+    note_id: PyObjectId,
+    user: UserPublic = Depends(get_current_user),
+):
+    result = await notes_collection.delete_one({
+        "_id": ObjectId(note_id),
+        "user_id": ObjectId(user.id)
+    })
+
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Note not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Note not found"
+        )
+
+    await delete_item_links(
+        user.id,
+        TypesEnum.note,
+        [note_id]
+    )
+
     return {"deleted": result.deleted_count}
 
 
@@ -190,10 +155,24 @@ async def delete_note(note_id: PyObjectId, user: UserPublic = Depends(get_curren
 # Delete listed notes
 
 @router.delete("/", status_code=200)
-async def delete_listed_notes(ids: Annotated[list[PyObjectId], Query(min_length=1, max_length=100)], user: UserPublic = Depends(get_current_user)):
+async def delete_listed_notes(
+    ids: Annotated[
+        list[PyObjectId],
+        Query(min_length=1, max_length=100)
+    ],
+    user: UserPublic = Depends(get_current_user),
+):
     ids = list(set(ids))
-    
-    result = await notes_collection.delete_many(
-        {"_id": {"$in": [ObjectId(i) for i in ids]}, "user_id": ObjectId(user.id)}
+
+    result = await notes_collection.delete_many({
+        "_id": {"$in": [ObjectId(i) for i in ids]},
+        "user_id": ObjectId(user.id)
+    })
+
+    await delete_item_links(
+        user.id,
+        TypesEnum.note,
+        ids
     )
+
     return {"deleted": result.deleted_count}

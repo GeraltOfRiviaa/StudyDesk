@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { api } from "@/api";
-import { useItemModal } from "./ItemsModalContext";
+import { api } from "@/api/client";
+import { useItemModal } from "../../context/ItemsModalContext";
 import { UpdateNote } from "@/components/notes/NoteUpdateModal";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -8,8 +8,8 @@ import {
     DialogContent,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { NoteCreateModal } from "./notes/NoteCreateModal";
-import { TagCreateModal } from "./tags/TagsCreateModal";
+import { NoteCreateModal } from "../notes/NoteCreateModal";
+import { TagCreateModal } from "../tags/TagsCreateModal";
 import { UpdateTag } from "@/components/tags/TagsUpdateModal";
 
 export function ItemModalRenderer() {

@@ -1,6 +1,6 @@
 
 import { Badge } from "@/components/ui/badge";
-import { getContrastColor } from "@/lib/colors"
+import { getContrastColor } from "@/utils/colors"
 
 export function TagBadge({ tag }) {
     return (

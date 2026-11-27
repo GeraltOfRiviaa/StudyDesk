@@ -57,6 +57,21 @@ docker compose -f docker-compose.dev.yml logs -f api
 
 ```
 
+### Seeding 
+
+**Seed**
+```
+docker compose -f docker-compose.dev.yml exec api python seed.py --dev
+```
+**Reset**
+```
+docker compose -f docker-compose.dev.yml exec api python seed.py --dev --reset
+```
+**Clear the demo account**
+```
+docker compose -f docker-compose.dev.yml exec api python seed.py --dev --clear
+```
+
 ### Shadcn preset code
 b2C8Rr6hs
 

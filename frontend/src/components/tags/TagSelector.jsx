@@ -1,6 +1,9 @@
-
 import { useEffect, useState } from "react";
-import { api } from "@/api";
+import { useQuery } from "@tanstack/react-query";
+import { useUser } from "@/context/AuthContext";
+import { useDebounce } from "@/hooks/useDebounce";
+import { useTagLookup } from "@/hooks/useTagLookup";
+import { api } from "@/api/client";
 import { TagBadge } from "@/components/tags/TagBadge";
 import { X } from "lucide-react";
 import {
@@ -13,42 +16,56 @@ import {
 } from "@/components/ui/command";
 
 
-export function TagSelector({ value = [], onChange }) {
+export function TagSelector({ value = [], onChange, allowCreate = true, disabled = false }) {
     const [tags, setTags] = useState([]);
     const [query, setQuery] = useState("");
     const [creating, setCreating] = useState(false);
+    const [chosenTags, setChosenTags] = useState([]);
+    const { user } = useUser();
+    const search = useDebounce(query.trim());
+    const tagSearch = useQuery({
+        queryKey: ["tags", user?.id, "selector", search],
+        queryFn: ({ signal }) => {
+            const params = new URLSearchParams({ limit: "50" });
+            if (search) params.set("q", search);
+            return api(`/tags/?${params}`, { signal });
+        },
+        enabled: !allowCreate && !!user?.id,
+    });
+    const searching = !allowCreate && (search !== query.trim() || tagSearch.isPending);
 
     useEffect(() => {
-        api("/tags/?limit=100")
+        if (!allowCreate) return;
+        api("/tags/?limit=30")
             .then(setTags)
             .catch(console.error);
-    }, []);
+    }, [allowCreate]);
 
-    const selectedTags = tags.filter(tag =>
-        value.includes(tag.id)
-    );
-
-    // [] at start
-    // after user start typing we trim the query
-    const suggestions = query.trim()
-        // we try to find any tags that fit the criteria
-        // if we find any we assign that array to suggestions
-        ? tags.filter(tag =>
-            // criteria = any tag that contains exactly our query
-            tag.name.toLowerCase().includes(query.trim().toLowerCase()) &&
-            // and also is not present in the array of already used tags
-            !value.includes(tag.id)
-        )
-        // the query has nothing we give nothing back
+    const missingTagIds = allowCreate
+        ? value.filter(id => !tags.some(tag => tag.id === id))
         : [];
+    const extraTags = useTagLookup(missingTagIds);
+    const knownTags = allowCreate ? [...tags, ...extraTags] : chosenTags;
+    const selectedTags = knownTags.filter(tag => value.includes(tag.id));
+
+    const matches = allowCreate
+        ? tags.filter(tag => query.trim() && tag.name.toLowerCase().includes(query.trim().toLowerCase()))
+        : searching ? [] : tagSearch.data ?? [];
+    const suggestions = matches.filter(tag => !value.includes(tag.id));
 
     function selectTag(tag) {
+        if (disabled) return;
+
         if (!value.includes(tag.id)) {
-            // sends the already listed tags + the new tag
-            // back into the form
+            if (!allowCreate) setChosenTags(prev => [...prev, tag]);
             onChange([...value, tag.id]);
         }
         setQuery("");
+    }
+
+    function removeTag(id) {
+        setChosenTags(prev => prev.filter(tag => tag.id !== id));
+        onChange(value.filter(tagId => tagId !== id));
     }
 
     async function handleKeyDown(event) {
@@ -67,7 +84,7 @@ export function TagSelector({ value = [], onChange }) {
         // and compare if they match the one
         //  the user just typed
         // return the already created tag from earlier
-        const existing = tags.find(tag =>
+        const existing = knownTags.find(tag =>
             tag.name.toLowerCase() === name.toLowerCase()
         );
 
@@ -106,22 +123,29 @@ export function TagSelector({ value = [], onChange }) {
                 <CommandInput
                     value={query}
                     onValueChange={setQuery}
-                    placeholder="Search or create tags..."
-                    disabled={creating}
+                    aria-label="Search tags"
+                    placeholder={allowCreate ? "Search or create tags..." : "Search tags..."}
+                    maxLength={allowCreate ? undefined : 50}
+                    disabled={creating || disabled}
                     onKeyDown={event => {
-                        if (event.key === "Enter" && suggestions.length === 0) {
+                        if (allowCreate && event.key === "Enter" && suggestions.length === 0) {
                             handleKeyDown(event);
                         }
                     }}
                 />
 
-                {query.trim() && (
+                {(!allowCreate || query.trim()) && (
                     <CommandList>
+                        {searching && <p role="status" className="px-3 py-2">Searching tags…</p>}
+                        {!allowCreate && !searching && tagSearch.isError && (
+                            <p role="alert" className="px-3 py-2">Could not load tags. Try searching again.</p>
+                        )}
                         <CommandGroup className="border my-2 rounded-md">
                             {suggestions.map(tag => (
                                 <CommandItem
                                     key={tag.id}
                                     value={tag.id}
+                                    disabled={disabled}
                                     onSelect={() => selectTag(tag)}
                                     className="mb-1 last:mb-0 cursor-pointer rounded-sm! px-3 py-2
                                             bg-transparent! hover:bg-accent!"
@@ -131,9 +155,9 @@ export function TagSelector({ value = [], onChange }) {
                             ))}
                         </CommandGroup>
 
-                        {suggestions.length === 0 && (
+                        {!searching && (allowCreate || !tagSearch.isError) && suggestions.length === 0 && (
                             <CommandEmpty>
-                                Press Enter to create "{query.trim()}"
+                                {allowCreate ? `Press Enter to create "${query.trim()}"` : "No matching tags."}
                             </CommandEmpty>
                         )}
                     </CommandList>
@@ -152,9 +176,8 @@ export function TagSelector({ value = [], onChange }) {
 
                         <button
                             type="button"
-                            onClick={() =>
-                                onChange(value.filter(id => id !== tag.id))
-                            }
+                            disabled={disabled}
+                            onClick={() => removeTag(tag.id)}
                             aria-label={`Remove ${tag.name}`}
                         >
                             <X className="size-3" />

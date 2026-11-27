@@ -1,4 +1,4 @@
-import { api } from "@/api";
+import { api } from "@/api/client";
 
 // Links live in their own MongoDB collection, not inside the item document.
 export async function syncItemLinks(sourceType, sourceId, selectedLinks = []) {

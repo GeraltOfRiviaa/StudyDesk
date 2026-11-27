@@ -1,7 +1,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Link2 } from "lucide-react";
-import { useItemModal } from "@/components/ItemsModalContext";
+import { useItemModal } from "@/context/ItemsModalContext";
 
 export function LinkBadge({ link }) {
     const { openItem } = useItemModal();

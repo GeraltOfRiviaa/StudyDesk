@@ -1,6 +1,6 @@
 
 import { createContext, useCallback, useContext, useRef, useState } from "react";
-import { ItemModalRenderer } from "@/components/ItemsModalRenderer"
+import { ItemModalRenderer } from "@/components/items/ItemsModalRenderer"
 
 const ItemModalContext = createContext(null);
 
