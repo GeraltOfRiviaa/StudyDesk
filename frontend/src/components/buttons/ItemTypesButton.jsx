@@ -1,5 +1,6 @@
 import { ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ITEM_TYPES } from "@/lib/itemTypes"
 import {
     DropdownMenu,
     DropdownMenuGroup,
@@ -9,17 +10,13 @@ import {
     DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 
-const itemTypes = [
-    { label: "Note", value: "notes" },
-    { label: "File", value: "files" },
-    { label: "Form", value: "forms" },
-    { label: "Event", value: "events" },
-]
+const itemTypes = Object.values(ITEM_TYPES)
 
 export function ItemTypesButton({
     size,
     value = [],
     onChange,
+    disabled = false,
 }) {
     const allSelected = value.length === 0
 
@@ -37,6 +34,7 @@ export function ItemTypesButton({
     return (
         <DropdownMenu>
             <DropdownMenuTrigger
+                disabled={disabled}
                 render={
                     <Button
                         variant="outline"
@@ -61,13 +59,13 @@ export function ItemTypesButton({
 
                     <DropdownMenuSeparator />
 
-                    {itemTypes.map(type => (
+                    {itemTypes.map(({ collection, label }) => (
                         <DropdownMenuCheckboxItem
-                            key={type.value}
-                            checked={value.includes(type.value)}
-                            onCheckedChange={() => toggleType(type.value)}
+                            key={collection}
+                            checked={value.includes(collection)}
+                            onCheckedChange={() => toggleType(collection)}
                         >
-                            {type.label}
+                            {label}
                         </DropdownMenuCheckboxItem>
                     ))}
                 </DropdownMenuGroup>

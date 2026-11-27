@@ -12,6 +12,7 @@ import {
     CommandInput,
 } from "@/components/ui/command";
 import { useItemModal } from "@/context/ItemsModalContext";
+import { ITEM_TYPES } from "@/lib/itemTypes";
 import { Button } from "../ui/button";
 
 
@@ -137,7 +138,7 @@ export function LinkSelector({
                                         {item.title}
                                     </span>
 
-                                    <Badge variant="secondary">
+                                    <Badge variant="secondary" title={ITEM_TYPES[item.type]?.label}>
                                         {item.type}
                                     </Badge>
                                 </CommandItem>
@@ -175,7 +176,7 @@ export function LinkSelector({
                                 {link.title}
                             </Button>
 
-                            <span className="text-muted-foreground">
+                            <span className="text-muted-foreground" title={ITEM_TYPES[link.item_type]?.label}>
                                 {link.item_type}
                             </span>
                         </Badge>

@@ -83,3 +83,47 @@ Follow the existing directory structure; typical responsibilities are:
 - For frontend changes, check existing search, filters, sorting, selection, modals, mutation feedback and cache refresh behavior as relevant.
 - Do not claim tests passed if they were not run. Report environmental blockers and remaining risks.
 - Finish with a concise summary, changed files, verification results and any assumptions or follow-up work. Explain significant implementation decisions so the maintainer can learn from the changes.
+
+## Implementation Explanations and Code Walkthroughs
+
+After completing any implementation, bug fix or refactoring task, provide a code walkthrough in addition to the summary of changes and verification results.
+
+The developer wants to understand how the implementation works, not just what was changed.
+
+### Explanation requirements
+
+- Start at the main entry point of the implemented functionality, such as the component where the user interacts with the feature.
+- Follow the actual execution flow in chronological order.
+- Explain which function is called, what arguments it receives and what it does.
+- When execution moves to another file, explain why it moves there and which function is called.
+- Explain how data and state are passed between components, hooks, API functions and backend endpoints.
+- Follow the response back through the application and explain how the UI updates.
+- Explain relevant error handling, cache invalidation and state changes.
+- Reference actual filenames, function names and line numbers using clickable file references whenever possible.
+- Explain unfamiliar or important programming concepts in simple terms when they are relevant to the implementation.
+
+### Explanation style
+
+- Keep explanations short, simple and precise.
+- Use numbered sections following the execution flow.
+- Group explanations by responsibility rather than listing files in arbitrary order.
+- Use small code snippets only when they help explain important logic.
+- Avoid explaining unrelated code or basic syntax unnecessarily.
+- Do not merely list modified files or describe their responsibilities independently. Explain how they connect.
+- Provide enough information for the developer to independently explain, maintain and extend the implementation.
+
+### Example execution flow
+
+For a frontend bulk action, start at `BulkActionsButton.jsx`:
+
+1. Explain what happens when the user clicks the action.
+2. Follow the function that opens the confirmation dialog.
+3. Explain what happens when the user confirms.
+4. Follow the mutation hook and its mutation function.
+5. Follow the API request to the backend router and core function.
+6. Explain what changes in the database.
+7. Follow the response back to the frontend, including notifications, cache invalidation and dialog behaviour.
+
+Adapt this approach to the actual task. For backend-only changes, start at the relevant endpoint or calling function. For refactoring tasks, explain how the affected execution flow works after the changes.
+
+Always base the walkthrough on the actual implemented code, not the original plan or assumptions.

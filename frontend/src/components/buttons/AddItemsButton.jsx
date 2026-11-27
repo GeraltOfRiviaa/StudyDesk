@@ -11,19 +11,20 @@ export function AddItemButton({ size, onSelectType, items }) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger render={
-                <Button size={size} variant="outline">
+                <Button size={size} variant="outline" aria-label="Add item">
                     <PlusIcon />
                 </Button>
             }>
             </DropdownMenuTrigger>
 
             <DropdownMenuContent>
-                {items.map(type => (
+                {items.map(({ type, label, disabled }) => (
                     <DropdownMenuItem
                         key={type}
-                        onClick={() => onSelectType(type.toLowerCase())}
+                        disabled={disabled}
+                        onClick={() => onSelectType(type)}
                     >
-                        {type}
+                        {label}
                     </DropdownMenuItem>
                 ))}
             </DropdownMenuContent>

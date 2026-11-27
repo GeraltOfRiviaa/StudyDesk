@@ -30,6 +30,7 @@ const sortOptions = [
 
 export function FilterButton({
     size,
+    itemsMode = true,
     tags = [],
     selectedTags = [],
     match = "any",
@@ -69,7 +70,10 @@ export function FilterButton({
 
                     {/* Tag selection */}
                     <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
+                        <DropdownMenuSubTrigger
+                            disabled={!itemsMode}
+                            className="data-disabled:opacity-50"
+                        >
                             Tags ({selectedTags.length})
                         </DropdownMenuSubTrigger>
 
@@ -96,7 +100,10 @@ export function FilterButton({
 
                     {/* Tag matching */}
                     <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>
+                        <DropdownMenuSubTrigger
+                            disabled={!itemsMode}
+                            className="data-disabled:opacity-50"
+                        >
                             Filter mode
                         </DropdownMenuSubTrigger>
 
@@ -135,7 +142,7 @@ export function FilterButton({
                                         key={option.value}
                                         value={option.value}
                                     >
-                                        {option.label}
+                                        {option.value === "title" && !itemsMode ? "Name" : option.label}
                                     </DropdownMenuRadioItem>
                                 ))}
                             </DropdownMenuRadioGroup>

@@ -30,9 +30,16 @@ export function useLibraryFilters() {
         }, { replace: true })
     }
 
-    // Remove all filters and restore default values
-    const resetFilters = () => {
-        setSearchParams({}, { replace: true })
+    const resetFilters = ({ preserveItemFilters = false } = {}) => {
+        setSearchParams(prev => {
+            if (!preserveItemFilters) return new URLSearchParams()
+
+            const params = new URLSearchParams(prev)
+            for (const key of ["q", "sort", "order"]) {
+                params.delete(key)
+            }
+            return params
+        }, { replace: true })
     }
 
     return {

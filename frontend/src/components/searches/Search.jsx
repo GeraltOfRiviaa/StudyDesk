@@ -6,6 +6,7 @@ export function Search({
     value = "",
     onChange,
     placeholder = "Search...",
+    maxLength,
 }) {
     return (
         <div className="relative w-full">
@@ -17,6 +18,7 @@ export function Search({
                 value={value}
                 onChange={e => onChange?.(e.target.value)}
                 placeholder={placeholder}
+                maxLength={maxLength}
                 className="pl-9 pr-9"
             />
 

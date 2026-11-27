@@ -1,26 +1,28 @@
 from datetime import datetime, timezone
-from typing import Annotated, Any
+from typing import Annotated, Literal
 
 from bson import ObjectId
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from pymongo import ReturnDocument
-from pymongo.collation import Collation
 from pymongo.errors import DuplicateKeyError
 
-from core.tags import TAG_REFS, to_tag, count_usage
-from models.tag import TagCreate, TagPublic, TagUpdate, TagDetail, TagUsage
+from core.tags import (
+    TAG_NAME_COLLATION,
+    TAG_REFS,
+    TagSort,
+    build_tag_list_query,
+    count_usage,
+    list_library_tags,
+    tags_collection,
+    to_tag,
+)
+from models.tag import PaginatedTags, TagCreate, TagPublic, TagUpdate, TagDetail, TagUsage
 from models.users import UserPublic
 from models.types import PyObjectId, Tag
 from database import db
 from core.security import get_current_user
 
-import re
-
 router = APIRouter(prefix="/tags", tags=["Tags"])
-tags_collection = db["tags"]
-
-# case-insensitive name matching ("Math" == "math")
-CI = Collation(locale="en", strength=2)
 
 
 # F1 - get all user's tags
@@ -31,18 +33,26 @@ async def list_tags(
     limit: Annotated[int, Query(ge=1, le=50)] = 30,
     user: UserPublic = Depends(get_current_user),
 ):
-    query: dict[str, Any] = {"user_id": ObjectId(user.id)}
-    if q:
-        query["name"] = {"$regex": re.escape(q), "$options": "i"}
-
     docs = await (
-        tags_collection.find(query)
-        .collation(CI)
+        tags_collection.find(build_tag_list_query(user.id, q))
+        .collation(TAG_NAME_COLLATION)
         .sort("name", 1)
         .limit(limit)
         .to_list(length=limit)
     )
     return [to_tag(d) for d in docs]
+
+
+@router.get("/library", response_model=PaginatedTags)
+async def get_library_tags(
+    q: Annotated[str | None, Query(max_length=150)] = None,
+    sort: TagSort = "updated_at",
+    order: Literal["asc", "desc"] = "desc",
+    limit: Annotated[int, Query(ge=1, le=50)] = 30,
+    cursor: str | None = None,
+    user: UserPublic = Depends(get_current_user),
+):
+    return await list_library_tags(user.id, q, sort, order, limit, cursor)
 
 
 ########################################################

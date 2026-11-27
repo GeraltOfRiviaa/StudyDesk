@@ -1,19 +1,15 @@
-import {
-    DialogClose,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle
-} from "@/components/ui/dialog";
-
-import { Button } from "@/components/ui/button";
-
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CreateNoteSchema } from "@/schemas";
 import { api } from "@/api/client";
 import { toast } from "@/components/ui/toast";
 
-import { NoteFields } from "@/components/notes/NoteFields"
+import { NoteFields } from "@/components/notes/NoteFields";
+import { ItemModalLayout } from "@/components/items/shared/ItemModalLayout";
+import { ItemModalHeader } from "@/components/items/shared/ItemModalHeader";
+import { ItemModalFooter } from "@/components/items/shared/ItemModalFooter";
+import { ItemRelationsFields } from "@/components/items/shared/ItemRelationsFields";
+import { FieldGroup } from "@/components/ui/field";
 import { syncItemLinks } from "@/api/linkApi";
 
 // CREATE NOTE MODAL
@@ -72,41 +68,22 @@ export function NoteCreateModal({
     }
 
     return (
-
-                <div className="flex min-h-0 flex-1 flex-col">
-                    <DialogHeader className="shrink-0 pb-3">
-                        <DialogTitle>Create Note</DialogTitle>
-                    </DialogHeader>
-
-                    <form
-                        onSubmit={form.handleSubmit(onSubmit)}
-                        className="flex min-h-0 flex-1 flex-col gap-4"
-                    >
-                        <div className="min-h-0 flex-1 overflow-y-auto">
-                            <NoteFields
-                                form={form}
-                                prefix="create-note"
-                            />
-                        </div>
-
-                        <DialogFooter className="shrink-0 border-t pt-3 sm:justify-between">
-                            <Button
-                                type="submit"
-                                size="sm"
-                                disabled={form.formState.isSubmitting}
-                            >
-                                Create
-                            </Button>
-
-                            <DialogClose
-                                render={
-                                    <Button type="button" size="sm" variant="outline" onClick={onClose}>
-                                        Cancel
-                                    </Button>
-                                }
-                            />
-                        </DialogFooter>
-                    </form>
-                </div>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
+            <ItemModalLayout
+                header={<ItemModalHeader title="Create Note" />}
+                footer={
+                    <ItemModalFooter
+                        submitLabel="Create"
+                        submitDisabled={form.formState.isSubmitting}
+                        onCancel={onClose}
+                    />
+                }
+            >
+                <FieldGroup>
+                    <NoteFields control={form.control} prefix="create-note" />
+                    <ItemRelationsFields control={form.control} />
+                </FieldGroup>
+            </ItemModalLayout>
+        </form>
     );
 }
