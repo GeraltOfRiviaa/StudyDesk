@@ -10,7 +10,7 @@ from models.link import LinkBase, LinkPublic
 from models.users import UserPublic
 from models.types import PyObjectId, TypesEnum
 from database import db
-from core.security import get_current_user
+from core.security import get_account_writer, get_current_user
 from core.links import item_links_query, link_exists, normalize_link, to_link, validate_item
 
 import re
@@ -210,7 +210,7 @@ async def get_item_links(
 @router.post("/", status_code=201, response_model=LinkPublic)
 async def create_link(
     link: LinkBase,
-    user: UserPublic = Depends(get_current_user),
+    user: UserPublic = Depends(get_account_writer),
 ):
     # Check existence and ownership of both items
     await validate_item(

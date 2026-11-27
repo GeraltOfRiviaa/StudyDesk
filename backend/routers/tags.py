@@ -20,7 +20,7 @@ from models.tag import PaginatedTags, TagCreate, TagPublic, TagUpdate, TagDetail
 from models.users import UserPublic
 from models.types import PyObjectId, Tag
 from database import db
-from core.security import get_current_user
+from core.security import get_account_writer, get_current_user
 
 router = APIRouter(prefix="/tags", tags=["Tags"])
 
@@ -103,7 +103,7 @@ async def get_tag(tag_id: PyObjectId, user: UserPublic = Depends(get_current_use
 # A1 - create tag
 
 @router.post("/", status_code=201, response_model=TagPublic)
-async def create_tag(tag: TagCreate, user: UserPublic = Depends(get_current_user)):
+async def create_tag(tag: TagCreate, user: UserPublic = Depends(get_account_writer)):
     now = datetime.now(timezone.utc)
     doc = {
         "user_id": ObjectId(user.id), 

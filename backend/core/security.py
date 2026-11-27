@@ -1,4 +1,6 @@
+from asyncio import Lock
 from datetime import datetime, timedelta, timezone
+from weakref import WeakValueDictionary
 import bcrypt
 from bson.errors import InvalidId
 from models.types import Password, Username
@@ -24,6 +26,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl='auth/login')
 
 JWT_SECRET = getenv('JWT_SECRET')
 EXPIRE_DAYS = 7
+_account_write_locks: WeakValueDictionary[str, Lock] = WeakValueDictionary()
 
 
 def hash_password(password: Password) -> str:
@@ -88,3 +91,14 @@ async def get_current_user(access_token: str | None = Cookie(default=None)) -> U
         created_at=user["created_at"])
     
     return response
+
+
+async def get_account_writer(user: UserPublic = Depends(get_current_user)):
+    """Serialize account deletion with requests that create owned documents."""
+    # The dev API has one worker. Idle locks are discarded when no request holds them.
+    lock = _account_write_locks.setdefault(user.id, Lock())
+    async with lock:
+        # Deletion may have finished while this request waited for the lock.
+        if not await users_collection.find_one({"_id": ObjectId(user.id)}, {"_id": 1}):
+            raise CREDENTIALS_ERROR
+        yield user

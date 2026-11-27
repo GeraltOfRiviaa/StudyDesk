@@ -1,11 +1,14 @@
 from datetime import datetime, timezone
+import logging
 from bson import ObjectId
 from fastapi import HTTPException, Depends, APIRouter, Cookie, Query, Response
+from fastapi.concurrency import run_in_threadpool
 from fastapi.security import OAuth2PasswordRequestForm
-from pymongo.errors import DuplicateKeyError
+from pymongo.errors import DuplicateKeyError, PyMongoError
 from database import db
-from core.security import hash_password, generate_token, auth_user, get_current_user, verify_password
-from models.users import UserChangePassword, UserCreate, UserPublic, UserUpdate
+from core.accounts import delete_account_data
+from core.security import hash_password, generate_token, auth_user, get_account_writer, get_current_user, verify_password
+from models.users import UserChangePassword, UserCreate, UserDelete, UserPublic, UserUpdate
 from urllib.parse import urlencode
 from fastapi.responses import RedirectResponse
 import secrets
@@ -16,6 +19,7 @@ import re
 
 router = APIRouter(prefix="/auth", tags=["Users"])
 users_collection = db["users"]
+logger = logging.getLogger(__name__)
 
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -28,14 +32,18 @@ FRONTEND_URL = "http://localhost:5173/dashboard"
 
 # Logout
 
-@router.post("/logout")
-async def logout(response: Response):
+def _clear_auth_cookie(response: Response):
     response.delete_cookie(
         key="access_token",
         httponly=True,
         samesite="lax",
         secure=False,  # must match how it was set; True in production
     )
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    _clear_auth_cookie(response)
     return {"ok": True}
 
 
@@ -126,7 +134,7 @@ async def update_user(data: UserUpdate, user: UserPublic = Depends(get_current_u
 # Change password
 
 @router.patch("/user/password")   # 1. new path, /user/update is already taken
-async def change_password(data: UserChangePassword ,user=Depends(get_current_user)):   # 2. async + Depends(get_current_user)
+async def change_password(data: UserChangePassword, user: UserPublic = Depends(get_account_writer)):
     # 1. get the old and new password (from a Pydantic model)
     old = data.old_password
     new = data.new_password
@@ -155,6 +163,45 @@ async def change_password(data: UserChangePassword ,user=Depends(get_current_use
         raise HTTPException(404, "User not found")
     # 6. return {"ok": True}
     return {"ok": True}
+
+
+@router.delete("/me", status_code=204)
+async def delete_account(
+    data: UserDelete,
+    response: Response,
+    user: UserPublic = Depends(get_account_writer),
+) -> None:
+    user_id = ObjectId(user.id)
+    account = await users_collection.find_one({"_id": user_id}, {"password_hash": 1})
+    if not account:
+        raise HTTPException(status_code=404, detail="User not found")
+    password_hash = account.get("password_hash")
+    if not password_hash:
+        raise HTTPException(
+            status_code=409,
+            detail="This account has no password. Password confirmation is required to delete it.",
+        )
+
+    try:
+        confirmed = await run_in_threadpool(
+            verify_password, data.password.get_secret_value(), password_hash
+        )
+    except ValueError:
+        # bcrypt rejects inputs longer than 72 bytes.
+        confirmed = False
+    if not confirmed:
+        raise HTTPException(status_code=400, detail="Incorrect password.")
+
+    try:
+        await delete_account_data(user_id)
+    except PyMongoError:
+        logger.exception("Account deletion interrupted for user %s", user_id)
+        raise HTTPException(
+            status_code=503,
+            detail="Account deletion was interrupted. Some data may already be deleted. Try again to finish.",
+        )
+
+    _clear_auth_cookie(response)
 
 
 ########################################################

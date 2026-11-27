@@ -5,10 +5,10 @@ import { useUser } from '@/context/AuthContext'
 import { ThemeProvider } from "@/providers/ThemeProvider"
 
 const Layout = () => {
-  const { user, loading } = useUser()
+  const { user, loading, accountDeleted } = useUser()
 
   if (loading) return <div className="h-screen grid place-items-center w-screen">Loading...</div>
-  if (!user) return <Navigate to="/login" replace />
+  if (!user) return <Navigate to="/login" replace state={{ accountDeleted }} />
 
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
