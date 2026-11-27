@@ -2,45 +2,23 @@ from datetime import datetime, timezone
 
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query
+from core.links import delete_item_links
+from core.notes import to_note
 from core.tags import validate_tag_ids
 from models.note import NoteCreate,  NoteUpdate, NoteListItem, NotePublic
 from models.users import  UserPublic
 from database import db
 from core.security import get_current_user
 from typing import Annotated, Literal
-from models.types import PyObjectId, Title
+from models.types import PyObjectId, Title, TypesEnum
 from pymongo import ReturnDocument
 from core.search import filtered_list
+
 
 router = APIRouter(prefix="/notes", tags=["Notes"])
 notes_collection = db["notes"]
 
-########################################################
 
-
-# Transfer note result from queries to NotePublic class
-
-def to_note(doc: dict) -> NotePublic:
-    return NotePublic(
-        id=str(doc["_id"]),
-        title=doc["title"],
-        content=str(doc["content"]),
-        tags=[str(t) for t in doc["tags"]],
-        created_at=doc["created_at"],
-        updated_at=doc["updated_at"],
-    )
-    
-def to_note_item(doc: dict) -> NoteListItem:
-    return NoteListItem(
-            id=str(doc["_id"]),
-            title=doc["title"],
-            tags=[str(t) for t in doc["tags"]],
-            created_at=doc["created_at"],
-            updated_at=doc["updated_at"],
-        )
-
-
-########################################################
 
 
 # Create note
@@ -146,13 +124,28 @@ async def update_note(note_id: PyObjectId, data: NoteUpdate, user: UserPublic = 
 
 # Delete a note
 
-@router.delete(path='/{note_id}', status_code=200)
-async def delete_note(note_id: PyObjectId, user: UserPublic = Depends(get_current_user)):
-    
-    result = await notes_collection.delete_one({"_id": ObjectId(note_id), "user_id": ObjectId(user.id)})
-    
+@router.delete("/{note_id}", status_code=200)
+async def delete_note(
+    note_id: PyObjectId,
+    user: UserPublic = Depends(get_current_user),
+):
+    result = await notes_collection.delete_one({
+        "_id": ObjectId(note_id),
+        "user_id": ObjectId(user.id)
+    })
+
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Note not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Note not found"
+        )
+
+    await delete_item_links(
+        user.id,
+        TypesEnum.note,
+        [note_id]
+    )
+
     return {"deleted": result.deleted_count}
 
 
@@ -162,10 +155,24 @@ async def delete_note(note_id: PyObjectId, user: UserPublic = Depends(get_curren
 # Delete listed notes
 
 @router.delete("/", status_code=200)
-async def delete_listed_notes(ids: Annotated[list[PyObjectId], Query(min_length=1, max_length=100)], user: UserPublic = Depends(get_current_user)):
+async def delete_listed_notes(
+    ids: Annotated[
+        list[PyObjectId],
+        Query(min_length=1, max_length=100)
+    ],
+    user: UserPublic = Depends(get_current_user),
+):
     ids = list(set(ids))
-    
-    result = await notes_collection.delete_many(
-        {"_id": {"$in": [ObjectId(i) for i in ids]}, "user_id": ObjectId(user.id)}
+
+    result = await notes_collection.delete_many({
+        "_id": {"$in": [ObjectId(i) for i in ids]},
+        "user_id": ObjectId(user.id)
+    })
+
+    await delete_item_links(
+        user.id,
+        TypesEnum.note,
+        ids
     )
+
     return {"deleted": result.deleted_count}

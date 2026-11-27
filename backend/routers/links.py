@@ -11,7 +11,7 @@ from models.users import UserPublic
 from models.types import PyObjectId, TypesEnum
 from database import db
 from core.security import get_current_user
-from core.links import item_links_query
+from core.links import item_links_query, link_exists, normalize_link, to_link, validate_item
 
 import re
 from core.collections import ITEM_COLLECTIONS
@@ -20,90 +20,7 @@ from core.collections import ITEM_COLLECTIONS
 router = APIRouter(prefix="/links", tags=["Links"])
 links_collection = db["links"]
 
-########################################################
 
-
-def to_link(doc: dict) -> LinkPublic:
-    return LinkPublic(
-        id=str(doc["_id"]),
-        user_id=str(doc["user_id"]),
-        item_a_id=str(doc["item_a_id"]),
-        item_a_type=doc["item_a_type"],
-        item_b_id=str(doc["item_b_id"]),
-        item_b_type=doc["item_b_type"],
-        created_at=doc["created_at"],
-    )
-
-
-########################################################
-
-
-# Helper - check that an item exists and belongs to the user
-
-async def validate_item(
-    user_id: str,
-    item_type: TypesEnum,
-    item_id: PyObjectId,
-):
-    collection = db[ITEM_COLLECTIONS[item_type]]
-
-    result = await collection.find_one({
-        "_id": ObjectId(item_id),
-        "user_id": ObjectId(user_id),
-    })
-
-    if result is None:
-        raise HTTPException(status_code=404, detail="Item not found")
-
-    return result
-
-
-########################################################
-
-
-# Helper - normalize link direction so A-B and B-A are identical
-
-def normalize_link(link: LinkBase) -> dict:
-    a = (link.item_a_type.value, link.item_a_id)
-    b = (link.item_b_type.value, link.item_b_id)
-
-    if a > b:
-        a, b = b, a
-
-    return {
-        "item_a_type": a[0],
-        "item_a_id": ObjectId(a[1]),
-        "item_b_type": b[0],
-        "item_b_id": ObjectId(b[1]),
-    }
-
-
-########################################################
-
-
-# F2 - helper: check whether two items are already linked
-
-async def link_exists(user_id: str, link: LinkBase) -> bool:
-    pair = normalize_link(link)
-
-    result = await links_collection.find_one({
-        "user_id": ObjectId(user_id),
-        "$or": [
-            pair,
-            {
-                "item_a_type": pair["item_b_type"],
-                "item_a_id": pair["item_b_id"],
-                "item_b_type": pair["item_a_type"],
-                "item_b_id": pair["item_a_id"],
-            },
-        ],
-    })
-
-    return result is not None
-
-
-
-########################################################
 
 
 # Search available items for autocomplete
@@ -138,7 +55,7 @@ async def search_link_items(
         excluded.add(source)
 
         docs = await links_collection.find(
-            item_links_query(user.id, source_type, source_id)
+            item_links_query(user.id, source_type, [source_id])
         ).to_list(length=None)
 
         for link in docs:
@@ -201,6 +118,7 @@ async def search_link_items(
 
 # F1 - get all links connected to an item
 # Returns linked item titles for the frontend
+# to have working LinksSelector
 
 @router.get("/{item_type}/{item_id}", status_code=200)
 async def get_item_links(
@@ -208,44 +126,77 @@ async def get_item_links(
     item_id: PyObjectId,
     user: UserPublic = Depends(get_current_user),
 ):
+    # validate item we are finding links for
     await validate_item(user.id, item_type, item_id)
 
+    # find every link with this item
     docs = await links_collection.find(
-        item_links_query(user.id, item_type, item_id)
+        item_links_query(user.id, item_type, [item_id])
     ).to_list(length=None)
 
-    results = []
-
+    # ids of linked items
+    grouped = {}
     
+    linked_items = []
+
+    # Identify the opposite side of each link
     for link in docs:
-        # identify which side contains the requested item and retrieve the opposite side.
-        if (link["item_a_type"] == item_type.value and str(link["item_a_id"]) == item_id):
+        if (
+            link["item_a_type"] == item_type.value
+            and link["item_a_id"] == ObjectId(item_id)
+        ):
             linked_type = TypesEnum(link["item_b_type"])
             linked_id = link["item_b_id"]
         else:
             linked_type = TypesEnum(link["item_a_type"])
             linked_id = link["item_a_id"]
 
-        # search the linked items collection
-        collection = db[ITEM_COLLECTIONS[linked_type]]
+        # for every type either add linked items if we already
+        # created that type in the dict
+        # or create a key of that type and an empty set
+        grouped.setdefault(linked_type, set()).add(linked_id)
 
-        linked_item = await collection.find_one(
-            {
-                "_id": linked_id,
-                "user_id": ObjectId(user.id),
-            },
-            {"title": 1},
-        )
-
-        # if the itema are not in their collection do not append them to the result
-        if linked_item is None:
-            continue
-
-        results.append({
+        # add the item object containing link and item id + item type
+        linked_items.append({
             "link_id": str(link["_id"]),
             "item_id": str(linked_id),
             "item_type": linked_type.value,
-            "title": linked_item["title"],
+        })
+
+    
+    titles = {}
+
+    # fetch all linked items grouped by collection
+    for linked_type, ids in grouped.items():
+        collection = db[ITEM_COLLECTIONS[linked_type]]
+
+        # make one query containing every item from one collection
+        items = await collection.find(
+            {
+                "_id": {"$in": list(ids)},
+                "user_id": ObjectId(user.id),
+            },
+            {"title": 1},
+        ).to_list(length=len(ids))
+
+        # create a title lookup dict
+        # ("note", "note2AVDC"): "Mathematics"
+        for item in items:
+            titles[(linked_type.value, str(item["_id"]))] = item["title"]
+
+    # Combine links with retrieved titles
+    results = []
+
+    for item in linked_items:
+        key = (item["item_type"], item["item_id"])
+
+        # Skip missing or inaccessible items
+        if key not in titles:
+            continue
+
+        results.append({
+            **item,
+            "title": titles[key],
         })
 
     return results

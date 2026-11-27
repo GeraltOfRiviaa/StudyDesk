@@ -1,6 +1,7 @@
 from bson import ObjectId
 from fastapi import HTTPException
 
+from models.tag import TagPublic
 from database import db
 from models.types import Tags
 from core.collections import ITEM_COLLECTIONS
@@ -8,6 +9,14 @@ from core.collections import ITEM_COLLECTIONS
 
 tags_collection = db["tags"]
 
+def to_tag(doc: dict) -> TagPublic:
+    return TagPublic(
+        id=str(doc["_id"]),
+        name=doc["name"],
+        color=doc["color"],
+        created_at=doc["created_at"],
+        updated_at=doc["updated_at"],
+    )
 
 # Collections containing tag references
 TAG_REFS = [

@@ -3,14 +3,14 @@ from typing import Annotated, Any
 
 from bson import ObjectId
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
-from pydantic import Field
 from pymongo import ReturnDocument
 from pymongo.collation import Collation
 from pymongo.errors import DuplicateKeyError
 
+from core.tags import TAG_REFS, to_tag, count_usage
 from models.tag import TagCreate, TagPublic, TagUpdate, TagDetail, TagUsage
 from models.users import UserPublic
-from models.types import PyObjectId, Tags, Tag
+from models.types import PyObjectId, Tag
 from database import db
 from core.security import get_current_user
 
