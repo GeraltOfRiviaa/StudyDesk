@@ -19,6 +19,7 @@ import { useItemModal } from "@/context/ItemsModalContext"
 import { useLibraryFilters } from "@/hooks/useLibraryFilters"
 import { useLibrary } from "@/hooks/useLibrary"
 import { useDebounce } from "@/hooks/useDebounce"
+import { useTagLookup } from "@/hooks/useTagLookup"
 
 function Library() {
     const [selected, setSelected] = useState(new Set())
@@ -68,6 +69,13 @@ function Library() {
     })
 
     const tags = tagsQuery.data ?? []
+    const listedTagIds = new Set(tags.map(tag => tag.id))
+    const missingNoteTagIds = itemsMode && tagsQuery.isSuccess
+        ? items.flatMap(item => item.type === "note" ? item.tags ?? [] : [])
+            .filter(id => !listedTagIds.has(id))
+        : []
+    const extraTags = useTagLookup(missingNoteTagIds)
+    const noteTags = [...tags, ...extraTags]
 
     // Determine which data should currently be displayed
     const displayedItems = itemsMode ? items : tags
@@ -167,7 +175,7 @@ function Library() {
         setItemsMode(prev => !prev)
     }
 
-    // Convert selection keys into objects for bulk deletion
+    // Convert selection keys into objects for bulk actions
     const selectedItems = displayedKeys.filter(key => selected.has(key)).map(key => {
         const [type, id] = key.split(":")
         return { type, id }
@@ -195,8 +203,8 @@ function Library() {
                 <div className="flex flex-row justify-between">
                     <div className="flex flex-row gap-2 my-auto">
                         <BulkActionsButton
-                            type="button"
                             size="sm"
+                            itemsMode={itemsMode}
                             selected={loading || displayError ? [] : selectedItems}
                             onDeleted={handleDeleted}
                         />
@@ -293,7 +301,7 @@ function Library() {
                                 <NoteRow
                                     key={`${item.type}:${item.id}`}
                                     note={item}
-                                    tags={tags}
+                                    tags={noteTags}
                                     selected={selected}
                                     onToggle={toggle}
                                 />

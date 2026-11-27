@@ -20,6 +20,7 @@ import { useItemModal } from "@/context/ItemsModalContext";
 import { syncItemLinks } from "@/api/linkApi";
 import { LinkBadge } from "@/components/links/LinkTagBadge";
 import { deleteWithToast } from "@/utils/deleteWithToast";
+import { useTagLookup } from "@/hooks/useTagLookup";
 
 // UPDATE NOTE FORM
 export function UpdateNote({
@@ -29,27 +30,10 @@ export function UpdateNote({
     onDeleted
 }) {
     const [viewMode, setViewMode] = useState(true);
-    const [availableTags, setAvailableTags] = useState([]);
     const [linksLoading, setLinksLoading] = useState(true);
     const [linksError, setLinksError] = useState(null);
     const allowNavigation = useRef(false);
     const { registerNavigationGuard } = useItemModal();
-
-    useEffect(() => {
-        async function fetchTags() {
-            try {
-                const tags = await api("/tags/?limit=30");
-                setAvailableTags(tags);
-            } catch (error) {
-                console.error("Could not fetch tags", error);
-            }
-        }
-
-        fetchTags();
-    }, []);
-
-    
-
 
     const form = useForm({
         resolver: zodResolver(UpdateNoteSchema),
@@ -63,9 +47,7 @@ export function UpdateNote({
 
     const selectedTags = form.watch("tags") ?? [];
 
-    const noteTags = availableTags.filter(tag =>
-        selectedTags.includes(tag.id)
-    );
+    const noteTags = useTagLookup(selectedTags);
 
     const { reset } = form;
     const isDirty = form.formState.isDirty;
