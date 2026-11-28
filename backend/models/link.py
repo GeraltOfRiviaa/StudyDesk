@@ -1,10 +1,18 @@
-from pydantic import BaseModel, ConfigDict, AwareDatetime, model_validator
+from typing import Annotated
+
+from bson import ObjectId
+from pydantic import AfterValidator, BaseModel, ConfigDict, AwareDatetime, model_validator
 from models.types import PyObjectId, TypesEnum
 
+
+# Keep API IDs as strings while making casing irrelevant before link validation.
+LinkObjectId = Annotated[PyObjectId, AfterValidator(lambda value: str(ObjectId(value)))]
+
+
 class LinkBase(BaseModel):
-    item_a_id: PyObjectId
+    item_a_id: LinkObjectId
     item_a_type: TypesEnum
-    item_b_id: PyObjectId
+    item_b_id: LinkObjectId
     item_b_type: TypesEnum
     model_config = ConfigDict(extra="forbid")
     
@@ -18,4 +26,3 @@ class LinkPublic(LinkBase):
     id: PyObjectId
     user_id: PyObjectId
     created_at: AwareDatetime
-    

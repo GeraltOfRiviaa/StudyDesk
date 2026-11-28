@@ -11,13 +11,13 @@ class UserCreate(UserBase):
     password: Password
 
 class UserUpdate(UpdateModel):
-    email: EmailStr | None = None
-    username: Username | None = None
+    email: EmailStr = Field(default_factory=lambda: None)
+    username: Username = Field(default_factory=lambda: None)
     
     @field_validator("email")
     @classmethod
     def lower_email(cls, v):
-        return v.lower() if v else v
+        return v.lower()
 
 class UserChangePassword(UpdateModel):
     old_password: str = Field(min_length=8)

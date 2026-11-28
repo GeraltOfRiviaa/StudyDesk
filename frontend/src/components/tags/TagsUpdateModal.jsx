@@ -12,8 +12,10 @@ import { deleteWithToast } from "@/utils/deleteWithToast";
 
 // UPDATE TAG FORM
 // Rendered inside TagRow's DialogContent. `tag` is the detail response (with usage).
-export function UpdateTag({ tag, onUpdated, onClose }) {
+export function UpdateTag({ tag, onUpdated, onClose, onChanged }) {
     const [confirmingDelete, setConfirmingDelete] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState(null);
     const form = useForm({
         resolver: zodResolver(UpdateTagSchema),
         defaultValues: { name: tag.name ?? "", color: tag.color ?? "#3b82f6" },
@@ -39,9 +41,33 @@ export function UpdateTag({ tag, onUpdated, onClose }) {
     }
 
     const handleDelete = async () => {
-        await deleteWithToast("tag", tag.id)
-        onUpdated?.()
-        onClose?.()
+        if (isDeleting) return;
+        setIsDeleting(true);
+        setDeleteError(null);
+        try {
+            await deleteWithToast("tag", tag.id);
+            onChanged?.();
+            onClose?.();
+        } catch (error) {
+            if (error.status === 404) {
+                onChanged?.();
+                onClose?.();
+            } else if (error.status === 503) {
+                const detail = (await error.json().catch(() => null))?.detail;
+                setDeleteError(detail?.message ?? "Could not confirm tag deletion. Try again.");
+                // Cleanup may have changed usage even when the tag still exists.
+                try {
+                    onUpdated?.(await api(`/tags/${tag.id}`));
+                } catch (refreshError) {
+                    onChanged?.();
+                    if (refreshError.status === 404) onClose?.();
+                }
+            } else {
+                setDeleteError("Could not delete this tag. Try again.");
+            }
+        } finally {
+            setIsDeleting(false);
+        }
     }
 
     const { total, by_collection } = tag.usage;
@@ -73,11 +99,15 @@ export function UpdateTag({ tag, onUpdated, onClose }) {
                                 ? `Used on ${total} item${total === 1 ? "" : "s"}, delete anyway?`
                                 : "Delete this tag?"}
                         </p>
+                        {deleteError && <p role="alert" className="text-destructive">{deleteError}</p>}
                         <DialogFooter className="sm:justify-start">
-                            <Button type="button" size="sm" variant="destructive" onClick={handleDelete}>
+                            <Button type="button" size="sm" variant="destructive" disabled={isDeleting} onClick={handleDelete}>
                                 Confirm delete
                             </Button>
-                            <Button type="button" size="sm" variant="outline" onClick={() => setConfirmingDelete(false)}>
+                            <Button type="button" size="sm" variant="outline" disabled={isDeleting} onClick={() => {
+                                setConfirmingDelete(false);
+                                setDeleteError(null);
+                            }}>
                                 Back
                             </Button>
                         </DialogFooter>

@@ -85,6 +85,14 @@ python -m unittest discover -s tests -v
 
 The tests use isolated in-memory records and exercise the API middleware, so they do not require a running MongoDB or seeded account.
 
+### Data integrity and retries
+
+Routes that coordinate item, tag, link and account writes acquire the per-user lock once through `get_account_writer`. The lock covers ownership checks, preflight and writes. Core helpers called by those routes must not acquire the same lock again. Waiting and active requests keep the lock alive, and its weak registry entry expires when the last request releases its reference.
+
+The lock coordinates one API process. Standalone MongoDB cannot roll back work across documents or collections. A bulk 503 reports completed `{type, id}` targets separately from acknowledged modification or deletion counts. Retry the unresolved targets. A timed-out or canceled database command can still have an unknown outcome. Tag deletion retries recheck ownership and usage, then continue removing any remaining references before deleting the tag.
+
+Run the backend regression suite with the command above. To include database operator tests, set `STUDYDESK_INTEGRITY_MONGO_PORT` to the published loopback port of a disposable MongoDB instance. The tests create and remove their own database on that instance. From `frontend`, run `node --test tests/bulkApi.test.js` to check client batching and partial progress.
+
 ### Logs (in a second terminal)
 ```
 docker compose -f docker-compose.dev.yml logs -f api

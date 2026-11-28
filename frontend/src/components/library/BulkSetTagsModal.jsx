@@ -11,7 +11,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 
-export function BulkSetTagsModal({ itemCount, isPending, onApply, onClose }) {
+export function BulkSetTagsModal({ itemCount, errorMessage, isPending, onApply, onClose }) {
     const [tags, setTags] = useState([])
     const overLimit = tags.length > MAX_BULK_TAGS
 
@@ -25,6 +25,7 @@ export function BulkSetTagsModal({ itemCount, isPending, onApply, onClose }) {
                     </DialogDescription>
                 </DialogHeader>
 
+                {errorMessage && <p role="alert" className="text-destructive">{errorMessage}</p>}
                 <TagSelector value={tags} onChange={setTags} allowCreate={false} disabled={isPending} />
                 {overLimit && (
                     <p role="alert">Select up to {MAX_BULK_TAGS} tags.</p>

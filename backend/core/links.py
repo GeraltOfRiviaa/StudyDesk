@@ -64,17 +64,17 @@ def to_link(doc: dict) -> LinkPublic:
 # Helper - normalize link direction so A-B and B-A are identical
 
 def normalize_link(link: LinkBase) -> dict:
-    a = (link.item_a_type.value, link.item_a_id)
-    b = (link.item_b_type.value, link.item_b_id)
+    a = (link.item_a_type.value, ObjectId(link.item_a_id))
+    b = (link.item_b_type.value, ObjectId(link.item_b_id))
 
     if a > b:
         a, b = b, a
 
     return {
         "item_a_type": a[0],
-        "item_a_id": ObjectId(a[1]),
+        "item_a_id": a[1],
         "item_b_type": b[0],
-        "item_b_id": ObjectId(b[1]),
+        "item_b_id": b[1],
     }
 
 
@@ -83,9 +83,8 @@ def normalize_link(link: LinkBase) -> dict:
 
 # F2 - helper: check whether two items are already linked
 
-async def link_exists(user_id: str, link: LinkBase) -> bool:
-    pair = normalize_link(link)
-
+async def link_exists(user_id: str, pair: dict) -> bool:
+    # Older valid links may still be stored in the opposite order.
     result = await links_collection.find_one({
         "user_id": ObjectId(user_id),
         "$or": [

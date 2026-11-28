@@ -6,9 +6,9 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo.errors import DuplicateKeyError
 
-from models.link import LinkBase, LinkPublic
+from models.link import LinkBase, LinkObjectId, LinkPublic
 from models.users import UserPublic
-from models.types import PyObjectId, TypesEnum
+from models.types import TypesEnum
 from database import db
 from core.security import get_account_writer, get_current_user
 from core.items import get_item
@@ -33,7 +33,7 @@ async def search_link_items(
     q: Annotated[str, Query(min_length=1, max_length=150)],
     item_type: TypesEnum | None = None,
     source_type: TypesEnum | None = None,
-    source_id: PyObjectId | None = None,
+    source_id: LinkObjectId | None = None,
     limit: Annotated[int, Query(ge=1, le=50)] = 10,
     user: UserPublic = Depends(get_current_user),
 ):
@@ -124,7 +124,7 @@ async def search_link_items(
 @router.get("/{item_type}/{item_id}", status_code=200)
 async def get_item_links(
     item_type: TypesEnum,
-    item_id: PyObjectId,
+    item_id: LinkObjectId,
     user: UserPublic = Depends(get_current_user),
 ):
     # validate item we are finding links for
@@ -223,7 +223,8 @@ async def create_link(
     )
 
     # Prevent duplicate connections
-    if await link_exists(user.id, link):
+    pair = normalize_link(link)
+    if await link_exists(user.id, pair):
         raise HTTPException(
             status_code=409,
             detail="Items are already linked",
@@ -233,8 +234,7 @@ async def create_link(
 
     doc = {
         "user_id": ObjectId(user.id),
-        # unpack the dict normalize_link gives back
-        **normalize_link(link),
+        **pair,
         "created_at": now,
     }
 
@@ -258,8 +258,8 @@ async def create_link(
 
 @router.delete("/{link_id}", status_code=200)
 async def delete_link(
-    link_id: PyObjectId,
-    user: UserPublic = Depends(get_current_user),
+    link_id: LinkObjectId,
+    user: UserPublic = Depends(get_account_writer),
 ):
     result = await links_collection.delete_one({
         "_id": ObjectId(link_id),

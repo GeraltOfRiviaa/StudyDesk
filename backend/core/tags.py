@@ -1,19 +1,22 @@
+import logging
 import re
-from datetime import datetime
+from collections.abc import Sequence
+from datetime import datetime, timezone
 from typing import Any, Literal
 
 from bson import ObjectId
 from fastapi import HTTPException
 from pymongo.collation import Collation
+from pymongo.errors import PyMongoError
 
 from models.tag import PaginatedTags, TagPublic
 from database import db
-from models.types import Tags
 from core.collections import ITEM_COLLECTIONS
 from core.search import decode_cursor, encode_cursor_payload
 
 
 tags_collection = db["tags"]
+logger = logging.getLogger(__name__)
 TAG_NAME_COLLATION = Collation(locale="en", strength=2)
 TagSort = Literal["name", "created_at", "updated_at"]
 
@@ -102,13 +105,16 @@ TAG_REFS = [
 ]
 
 
-# Validate tag existence and ownership
+def normalize_tag_ids(tag_ids: Sequence[str]) -> list[ObjectId]:
+    # Convert before deduplication so hex casing cannot change which IDs are checked or written.
+    return list(dict.fromkeys(ObjectId(tag_id) for tag_id in tag_ids))
+
+
 async def validate_tag_ids(
     user_id: str,
-    tag_ids: Tags
-) -> Tags:
-
-    ids = list({ObjectId(t) for t in tag_ids})
+    tag_ids: Sequence[str],
+) -> list[ObjectId]:
+    ids = normalize_tag_ids(tag_ids)
 
     if not ids:
         return []
@@ -124,7 +130,7 @@ async def validate_tag_ids(
             detail="Invalid tag ids"
         )
 
-    return [str(t) for t in ids]
+    return ids
 
 
 # Count tag usage across collections
@@ -144,3 +150,43 @@ async def count_usage(
         result[collection] = count
 
     return result
+
+
+async def delete_tags(user_id: str, tag_ids: Sequence[str], *, confirm: bool) -> int:
+    uid = ObjectId(user_id)
+    ids = normalize_tag_ids(tag_ids)
+    owned_tags = {"_id": {"$in": ids}, "user_id": uid}
+    stage = "inspection"
+
+    try:
+        # A retry can see different ownership or usage after the previous attempt released its lock.
+        if await tags_collection.count_documents(owned_tags) != len(ids):
+            raise HTTPException(status_code=404, detail="Tag not found")
+        by_collection = await count_usage(uid, ids)
+        total = sum(by_collection.values())
+        if total and not confirm:
+            raise HTTPException(
+                status_code=409,
+                detail={"message": "Tags in use", "total": total, "by_collection": by_collection},
+            )
+
+        stage = "cleanup"
+        now = datetime.now(timezone.utc)
+        # Only documents still referencing these tags are touched, including on retry.
+        for collection, field in TAG_REFS:
+            await db[collection].update_many(
+                {"user_id": uid, field: {"$in": ids}},
+                {"$pull": {field: {"$in": ids}}, "$set": {"updated_at": now}},
+            )
+
+        stage = "deletion"
+        result = await tags_collection.delete_many(owned_tags)
+        return result.deleted_count
+    except PyMongoError:
+        logger.exception("Tag deletion interrupted during %s for user %s", stage, uid)
+        message = {
+            "inspection": "Could not check tag ownership or usage. Try again.",
+            "cleanup": "Tag cleanup was interrupted. Some references may have been removed. Try again to finish.",
+            "deletion": "Could not confirm tag deletion. Refresh and retry any remaining tags.",
+        }[stage]
+        raise HTTPException(status_code=503, detail={"message": message}) from None

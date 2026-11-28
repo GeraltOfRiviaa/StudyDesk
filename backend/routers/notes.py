@@ -79,7 +79,7 @@ async def filtered_list_notes(
 
 # Update note
 @router.patch(path='/{note_id}', status_code=200, response_model=NotePublic)
-async def update_note(note_id: PyObjectId, data: NoteUpdate, user: UserPublic = Depends(get_current_user)):
+async def update_note(note_id: PyObjectId, data: NoteUpdate, user: UserPublic = Depends(get_account_writer)):
     changes = await prepare_item_update(user.id, data)
     # Match the owner and return the updated Note in the same database operation.
     result = await notes_collection.find_one_and_update(

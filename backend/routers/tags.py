@@ -8,10 +8,10 @@ from pymongo.errors import DuplicateKeyError
 
 from core.tags import (
     TAG_NAME_COLLATION,
-    TAG_REFS,
     TagSort,
     build_tag_list_query,
     count_usage,
+    delete_tags as delete_owned_tags,
     list_library_tags,
     tags_collection,
     to_tag,
@@ -154,32 +154,6 @@ async def update_tag(tag_id: PyObjectId, data: TagUpdate, user: UserPublic = Dep
 async def delete_tags(
     ids: Annotated[list[PyObjectId], Query(min_length=1, max_length=100)],
     confirm: bool = False,
-    user: UserPublic = Depends(get_current_user),
+    user: UserPublic = Depends(get_account_writer),
 ):
-    uid = ObjectId(user.id)
-    tids = [ObjectId(i) for i in set(ids)]
-
-    # Check if the tags exist and the user owns them
-    owned = await tags_collection.count_documents({"_id": {"$in": tids}, "user_id": uid})
-    if owned != len(tids):
-        raise HTTPException(status_code=404, detail="Tag not found")
-
-    # Count how many tags are there in the whole DB
-    by_collection = await count_usage(uid, tids)
-    total = sum(by_collection.values())
-
-    # If the user did not confirm he wants to delete those then error
-    if total and not confirm:
-        raise HTTPException(
-            status_code=409,
-            detail={"message": "Tags in use", "total": total, "by_collection": by_collection},
-        )
-
-    # If the user did confirm then delete the from tags and every other collection
-    result = await tags_collection.delete_many({"_id": {"$in": tids}, "user_id": uid})
-    for coll, field in TAG_REFS:
-        await db[coll].update_many(
-            {"user_id": uid, field: {"$in": tids}},
-            {"$pull": {field: {"$in": tids}}},
-        )
-    return {"deleted": result.deleted_count}
+    return {"deleted": await delete_owned_tags(user.id, ids, confirm=confirm)}

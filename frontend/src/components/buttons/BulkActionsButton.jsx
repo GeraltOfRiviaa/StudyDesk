@@ -21,6 +21,7 @@ import { useBulkDelete } from "@/hooks/useBulkDelete"
 import { useBulkRemoveLinks } from "@/hooks/useBulkRemoveLinks"
 import { useBulkSetTags } from "@/hooks/useBulkSetTags"
 import { useBulkUnlinkTags } from "@/hooks/useBulkUnlinkTags"
+import { bulkErrorDescription, bulkTargetKey } from "@/api/bulkApi"
 
 export function BulkActionsButton({ size, selected, itemsMode, onDeleteSettled }) {
     const [action, setAction] = useState(null)
@@ -69,10 +70,17 @@ export function BulkActionsButton({ size, selected, itemsMode, onDeleteSettled }
             await submit({ items: action.items, tags })
             setAction(null)
         } catch (error) {
-            if (error.completed) {
-                // Retry only the items outside the completed batches.
-                setAction({ ...action, items: action.items.slice(error.completed) })
-            }
+            // A failed batch can report completed targets anywhere in the selection.
+            const completed = new Set((error.completedItems ?? []).map(bulkTargetKey))
+            const remaining = action.items.filter(item => !completed.has(bulkTargetKey(item)))
+            const [field, label] = {
+                setTags: ["modified", "modifications"],
+                unlinkTags: ["modified", "modifications"],
+                removeLinks: ["deleted", "link removals"],
+                delete: ["deleted", "deletions"],
+            }[action.kind]
+            const errorMessage = bulkErrorDescription(error, action.items.length, field, label)
+            setAction(remaining.length ? { ...action, items: remaining, errorMessage } : null)
         } finally {
             submitting.current = false
         }
@@ -111,6 +119,7 @@ export function BulkActionsButton({ size, selected, itemsMode, onDeleteSettled }
             {action?.kind === "setTags" && (
                 <BulkSetTagsModal
                     itemCount={itemCount}
+                    errorMessage={action.errorMessage}
                     isPending={isPending}
                     onApply={tags => submitAction(setTags.mutateAsync, tags)}
                     onClose={closeAction}
@@ -125,6 +134,7 @@ export function BulkActionsButton({ size, selected, itemsMode, onDeleteSettled }
                             <DialogTitle>{confirmation.title}</DialogTitle>
                             <DialogDescription>{confirmation.description(selection)}</DialogDescription>
                         </DialogHeader>
+                        {action.errorMessage && <p role="alert" className="text-destructive">{action.errorMessage}</p>}
                         <DialogFooter>
                             <Button type="button" variant="outline" disabled={isPending} onClick={closeAction}>
                                 Cancel

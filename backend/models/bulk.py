@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict, Field
-from models.types import PyObjectId, TypesEnum
+from models.types import MAX_TAGS_PER_ITEM, PyObjectId, TypesEnum
 
 
 # Represents one selected item
@@ -24,7 +24,7 @@ class BulkRequest(BaseModel):
 class BulkAddTagsRequest(BulkRequest):
     tags: list[PyObjectId] = Field(
         min_length=1,
-        max_length=100
+        max_length=MAX_TAGS_PER_ITEM
     )
 
 

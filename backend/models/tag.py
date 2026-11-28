@@ -10,8 +10,8 @@ class TagCreate(TagBase):
     model_config = ConfigDict(extra="forbid")
 
 class TagUpdate(UpdateModel):
-    name: Tag | None = None
-    color: HexColor | None = None
+    name: Tag = Field(default_factory=lambda: None)
+    color: HexColor = Field(default_factory=lambda: None)
 
 class TagPublic(TagBase):
     id: PyObjectId

@@ -1,13 +1,6 @@
 import { useMutation } from "@tanstack/react-query"
 import { toast } from "@/components/ui/toast"
-import { bulkDeleteItems } from "@/api/bulkApi"
-import { deleteItem } from "@/api/deleteItem"
-
-async function bulkDeleteTags(items) {
-    const results = await Promise.allSettled(items.map(deleteItem))
-    const deletedItems = results.filter(result => result.status === "fulfilled").map(result => result.value)
-    return { deleted: deletedItems.length, failed: results.length - deletedItems.length, deletedItems }
-}
+import { bulkDeleteItems, bulkDeleteTags, bulkErrorDescription } from "@/api/bulkApi"
 
 export function useBulkDelete(onDeleteSettled) {
     return useMutation({
@@ -15,27 +8,20 @@ export function useBulkDelete(onDeleteSettled) {
             ? bulkDeleteTags(items)
             : bulkDeleteItems({ items }),
         retry: false,
-        onSuccess: ({ deleted, skipped, failed }) => toast.add({
+        onSuccess: ({ deleted, skipped }) => toast.add({
             title: "Bulk deletion completed",
-            description: failed === undefined
-                ? `${deleted} deleted, ${skipped} skipped.`
-                : `Deleted: ${deleted}, Failed: ${failed}`,
-            type: failed > 0 ? "error" : "success",
+            description: `${deleted} deleted, ${skipped} skipped.`,
+            type: "success",
         }),
-        onError: error => toast.add({
+        onError: (error, { items }) => toast.add({
             title: "Bulk deletion failed",
-            description: error.deleted
-                ? `${error.message} Confirmed deletions: ${error.deleted}.`
-                : error.message,
+            description: bulkErrorDescription(error, items.length, "deleted", "deletions"),
             type: "error",
         }),
         onSettled: (result, error, { items }) => {
-            // A failed batch may have applied changes. Refresh even when it stays selected for retry.
-            const completed = error ? (error.completed ?? 0) : items.length
-            const completedItems = items.slice(0, completed)
-            // In Items mode a completed batch accounts for every ID, including already missing rows.
-            // Tag deletion reports each fulfilled request because some tags may still exist.
-            return onDeleteSettled?.(completedItems, result?.deletedItems ?? completedItems)
+            // A resolved deletion target is unavailable, whether deleted or already missing.
+            const completedItems = error ? error.completedItems ?? [] : result?.completedItems ?? items
+            return onDeleteSettled?.(completedItems)
         },
     })
 }
