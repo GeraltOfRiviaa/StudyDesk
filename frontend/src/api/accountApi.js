@@ -8,6 +8,12 @@ export function authRateLimitMessage(response) {
     return `Too many attempts. Try again in ${seconds} ${seconds === 1 ? "second" : "seconds"}.`
 }
 
+export async function identityConflictMessage(response) {
+    if (!(response instanceof Response) || response.status !== 409) return null
+    const body = await response.json().catch(() => null)
+    return typeof body?.detail === "string" ? body.detail : "Username or email already taken"
+}
+
 export async function deleteAccount(password) {
     try {
         await api("/auth/me", { method: "DELETE", json: { password } })

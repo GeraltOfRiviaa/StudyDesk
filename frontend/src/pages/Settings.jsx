@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm, Controller } from "react-hook-form"
 import { UpdateUserSchema } from '../schemas'
 import { api } from '@/api/client'
+import { identityConflictMessage } from "@/api/accountApi"
 import { toast } from "@/components/ui/toast"
 import { useUser} from "@/context/AuthContext"
 import { DeleteAccountButton } from "@/components/settings/DeleteAccountButton"
@@ -31,7 +32,7 @@ function Settings() {
         } catch (err) {
             toast.add({
                 title: "Could not update the user",
-                description: err.status === 409 ? "Username or email already taken" : "Try again later",
+                description: await identityConflictMessage(err) ?? "Try again later",
                 type: "error",
             })
         }

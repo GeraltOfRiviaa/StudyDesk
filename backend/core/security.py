@@ -10,6 +10,7 @@ from fastapi import Cookie, Depends, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
 
 from database import db
+from core.indexes import SIMPLE_COLLATION
 from models.types import password_fits_bcrypt
 from models.users import UserPublic
 
@@ -46,7 +47,7 @@ async def verify_password(password: str, hashed: str | None) -> bool:
 
 
 async def auth_user(username: str, password: str) -> dict | None:
-    user = await users_collection.find_one({"username": username})
+    user = await users_collection.find_one({"username": username}, collation=SIMPLE_COLLATION)
     if user and await verify_password(password, user.get("password_hash")):
         return user
     return None

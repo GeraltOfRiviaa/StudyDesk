@@ -1,5 +1,11 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, AwareDatetime, Field, SecretStr, field_validator
+from typing import Annotated
+
+from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, AwareDatetime, Field, SecretStr
 from models.types import Username, Password, PyObjectId, UpdateModel
+
+
+# Apply the same validated identity policy to every password-account email write.
+NormalizedEmail = Annotated[EmailStr, AfterValidator(str.lower)]
 
 
 class UserBase(BaseModel):
@@ -7,17 +13,13 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     model_config = ConfigDict(extra="forbid")
+    email: NormalizedEmail
     username: Username
     password: Password
 
 class UserUpdate(UpdateModel):
-    email: EmailStr = Field(default_factory=lambda: None)
+    email: NormalizedEmail = Field(default_factory=lambda: None)
     username: Username = Field(default_factory=lambda: None)
-    
-    @field_validator("email")
-    @classmethod
-    def lower_email(cls, v):
-        return v.lower()
 
 class UserChangePassword(UpdateModel):
     old_password: str = Field(min_length=8)

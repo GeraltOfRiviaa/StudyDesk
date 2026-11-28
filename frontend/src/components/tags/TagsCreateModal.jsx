@@ -25,10 +25,10 @@ export function TagCreateModal({ onCreated, onClose }) {
             toast.add({ title: "Tag created", type: "success" });
             form.reset();
             
-        } catch (err) {
+        } catch {
             toast.add({
                 title: "Could not create tag",
-                description: err?.status === 409 ? "Tag already exists" : "Try again later",
+                description: "Try again later",
                 type: "error",
             });
         }

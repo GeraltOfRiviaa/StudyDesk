@@ -14,8 +14,10 @@ from core.auth_config import (
     url_origin,
     validate_trusted_proxy_config,
 )
+from core.indexes import initialize_indexes
 from core.limiter import AuthLimiter
 from core.search import filtered_list
+from database import db
 from models.users import UserPublic
 from models.types import PyObjectId, Title, PaginatedItems
 from core.security import get_current_user
@@ -28,6 +30,8 @@ async def lifespan(app: FastAPI):
     app.state.auth_cookie_secure = load_secure_cookie_flag()
     validate_trusted_proxy_config()
     app.state.auth_limiter = AuthLimiter()
+    # Finish index checks and builds before FastAPI accepts requests.
+    await initialize_indexes(db)
     yield
 
 

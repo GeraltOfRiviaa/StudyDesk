@@ -41,7 +41,7 @@ SECRET = token_hex(32)
 
 
 class ApiTests(unittest.IsolatedAsyncioTestCase):
-    async def asyncSetUp(self):
+    async def asyncSetUp(self, database=None):
         self.enterContext(patch.dict(os.environ, {
             "JWT_SECRET": SECRET,
             "FRONTEND_ORIGINS": ORIGIN,
@@ -54,6 +54,10 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
         ))
         app = create_app()
         app.dependency_overrides[security.get_current_user] = lambda: self.user
+        if database is None:
+            self.enterContext(patch("main.initialize_indexes", AsyncMock()))
+        else:
+            self.enterContext(patch("main.db", database))
         await self.enterAsyncContext(app.router.lifespan_context(app))
         self.client = await self.enterAsyncContext(AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test", headers={"Origin": ORIGIN},
@@ -229,7 +233,6 @@ class PartialBulkTests(unittest.IsolatedAsyncioTestCase):
 @unittest.skipUnless(os.getenv("STUDYDESK_INTEGRITY_MONGO_PORT"), "Requires an isolated MongoDB instance")
 class MongoIntegrityTests(ApiTests):
     async def asyncSetUp(self):
-        await super().asyncSetUp()
         port = int(os.environ["STUDYDESK_INTEGRITY_MONGO_PORT"])
         if port in (27017, 27018):
             self.fail("Select the published port of a disposable MongoDB instance")
@@ -237,6 +240,7 @@ class MongoIntegrityTests(ApiTests):
         self.addAsyncCleanup(mongo.close)
         self.db = mongo[f"studydesk_integrity_{ObjectId()}"]
         self.addAsyncCleanup(mongo.drop_database, self.db.name)
+        await super().asyncSetUp(database=self.db)
         for module in (bulk, items, links, tags):
             self.enterContext(patch.object(module, "db", self.db))
         for module, name, collection in (

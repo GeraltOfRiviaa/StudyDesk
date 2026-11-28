@@ -9,6 +9,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from pymongo.errors import DuplicateKeyError, PyMongoError
 from database import db
 from core.accounts import delete_account_data
+from core.indexes import SIMPLE_COLLATION
 from core.limiter import limit_by_ip
 from core.security import SESSION_DURATION, hash_password, generate_token, auth_user, get_account_writer, get_current_user, verify_password
 from models.users import UserChangePassword, UserCreate, UserDelete, UserPublic, UserUpdate
@@ -82,24 +83,51 @@ async def logout(request: Request, response: Response):
 
 # Register
 
+IDENTITY_CONFLICTS = {
+    "username": "Username already in use",
+    "email": "Email already in use",
+}
+
+
+async def _find_identity_conflict(changes, exclude_id=None):
+    identity = {field: changes[field] for field in IDENTITY_CONFLICTS if field in changes}
+    query = {"$or": [{field: value} for field, value in identity.items()]}
+    if exclude_id is not None:
+        query["_id"] = {"$ne": exclude_id}
+    if identity and (match := await users_collection.find_one(query, collation=SIMPLE_COLLATION)):
+        return next((message for field, message in IDENTITY_CONFLICTS.items()
+                     if field in identity and match.get(field) == identity[field]), None)
+
+
+async def _identity_write_conflict(error, changes, exclude_id=None):
+    # Use MongoDB's key metadata to identify the constraint without reading or exposing its value.
+    pattern = (error.details or {}).get("keyPattern")
+    for field, message in IDENTITY_CONFLICTS.items():
+        if pattern == {field: 1}:
+            return message
+    if not pattern:
+        return await _find_identity_conflict(changes, exclude_id) or "Account conflicts with an existing record"
+    return "Account conflicts with an existing record"
+
+
 @router.post("/register", response_model=UserPublic, status_code=201, dependencies=[Depends(limit_by_ip("register"))])
 async def register(data: UserCreate):
     '''Register the user with email, username and password'''
-    if await users_collection.find_one({"$or": [{"email": data.email}, {"username": data.username}]}):
-        raise HTTPException(status_code=409, detail="User already exists")
+    identity = {"username": data.username, "email": data.email}
+    if conflict := await _find_identity_conflict(identity):
+        raise HTTPException(status_code=409, detail=conflict)
 
     now = datetime.now(timezone.utc)
     doc = {
-        "username": data.username,
-        "email": data.email,
+        **identity,
         "password_hash": await hash_password(data.password),
         "created_at": now,
         "updated_at": now,
     }
     try:
         result = await users_collection.insert_one(doc)
-    except DuplicateKeyError:  # race condition safety net
-        raise HTTPException(status_code=409, detail="User already exists")
+    except DuplicateKeyError as error:
+        raise HTTPException(status_code=409, detail=await _identity_write_conflict(error, identity)) from None
     response = UserPublic(
         id=str(result.inserted_id),
         username=data.username, 
@@ -137,12 +165,15 @@ async def update_user(data: UserUpdate, user: UserPublic = Depends(get_current_u
         raise HTTPException(status_code=400, detail="Nothing to update")
     changes["updated_at"] = datetime.now(timezone.utc)
 
+    user_id = ObjectId(user.id)
     try:
         result = await users_collection.update_one(
-            {"_id": ObjectId(user.id)}, {"$set": changes}
+            {"_id": user_id}, {"$set": changes}
         )
-    except DuplicateKeyError:
-        raise HTTPException(status_code=409, detail="Email already in use")
+    except DuplicateKeyError as error:
+        raise HTTPException(
+            status_code=409, detail=await _identity_write_conflict(error, changes, exclude_id=user_id),
+        ) from None
 
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="User not found")
