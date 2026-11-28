@@ -1,16 +1,16 @@
 from asyncio import Lock
 from datetime import datetime, timedelta, timezone
 from weakref import WeakValueDictionary
+
 import bcrypt
-from bson.errors import InvalidId
-from models.types import Password, Username
-from database import db
-from bson import ObjectId
-from fastapi import Cookie, Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
 import jwt
-from dotenv import load_dotenv
-from os import getenv
+from bson import ObjectId
+from bson.errors import InvalidId
+from fastapi import Cookie, Depends, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
+
+from database import db
+from models.types import password_fits_bcrypt
 from models.users import UserPublic
 
 
@@ -20,77 +20,74 @@ CREDENTIALS_ERROR = HTTPException(
         detail="Invalid credentials",
         headers={"WWW-Authenticate": "Bearer"},
         )
-load_dotenv()
 users_collection = db["users"]
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl='auth/login')
 
-JWT_SECRET = getenv('JWT_SECRET')
-EXPIRE_DAYS = 7
+JWT_ALGORITHM = "HS256"
+SESSION_DURATION = timedelta(days=7)
 _account_write_locks: WeakValueDictionary[str, Lock] = WeakValueDictionary()
 
 
-def hash_password(password: Password) -> str:
-    '''Hash the password with bcrypt'''
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+def _hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("ascii")
 
-def verify_password(password: Password, hashed: str) -> bool:
-    '''Verify if the str password provided matches with the hashed password'''
-    return bcrypt.checkpw(password.encode(), hashed.encode())
 
-async def auth_user(username: Username, password: Password):
-    '''Authenticate users based on email and password'''
-    user = await users_collection.find_one({"username" : username})
-    
-    if not user:
+async def hash_password(password: str) -> str:
+    return await run_in_threadpool(_hash_password, password)
+
+
+async def verify_password(password: str, hashed: str | None) -> bool:
+    if not isinstance(hashed, str) or not hashed or not password_fits_bcrypt(password):
         return False
-    if not verify_password(password=password, hashed=user["password_hash"]):
+    try:
+        # Bcrypt work runs off the request event loop. A malformed stored hash cannot authenticate.
+        return await run_in_threadpool(bcrypt.checkpw, password.encode("utf-8"), hashed.encode())
+    except ValueError:
         return False
-    
-    return user
 
 
-def generate_token(user: dict) -> str:
-    '''Generate OAuth2 token with username and password'''
+async def auth_user(username: str, password: str) -> dict | None:
+    user = await users_collection.find_one({"username": username})
+    if user and await verify_password(password, user.get("password_hash")):
+        return user
+    return None
 
+
+def generate_token(user: dict, secret: str) -> str:
     payload = {
         "sub": str(user["_id"]),
         "username": user["username"],
-        "exp": datetime.now(timezone.utc)+ timedelta(minutes=EXPIRE_DAYS * 1440),
+        "exp": datetime.now(timezone.utc) + SESSION_DURATION,
     }
-    
-    token = jwt.encode(payload,str(JWT_SECRET),algorithm="HS256")
-    
-    return token
-        
-        
-async def get_current_user(access_token: str | None = Cookie(default=None)) -> UserPublic:
-    '''Get current user from the token'''
+    return jwt.encode(payload, secret, algorithm=JWT_ALGORITHM)
+
+
+async def get_current_user(request: Request, access_token: str | None = Cookie(default=None)) -> UserPublic:
     if not access_token:
         raise CREDENTIALS_ERROR
     try:
-        
-        payload = jwt.decode(access_token, str(JWT_SECRET), algorithms=["HS256"])
-        sub = payload.get("sub")
-        
-        if not sub:
+        payload = jwt.decode(
+            access_token,
+            request.app.state.jwt_secret,
+            algorithms=[JWT_ALGORITHM],
+            options={"require": ["exp", "sub"]},
+        )
+        if type(payload["exp"]) is not int or not isinstance(payload["sub"], str):
             raise CREDENTIALS_ERROR
-        
-        user = await users_collection.find_one({"_id": ObjectId(sub)})
-    except (jwt.InvalidTokenError, InvalidId):
-        raise CREDENTIALS_ERROR
-    
+        user_id = ObjectId(payload["sub"])
+    except (jwt.InvalidTokenError, InvalidId, TypeError, ValueError, OverflowError):
+        raise CREDENTIALS_ERROR from None
+
+    # Account deletion invalidates a token even when its signature and expiration are still valid.
+    user = await users_collection.find_one({"_id": user_id})
     if not user:
         raise CREDENTIALS_ERROR
-            
-    user.pop("password_hash", None)
-    
-    response = UserPublic(
-        id=user["_id"], 
+
+    return UserPublic(
+        id=user["_id"],
         email=user["email"],
         username=user["username"],
-        created_at=user["created_at"])
-    
-    return response
+        created_at=user["created_at"],
+    )
 
 
 async def get_account_writer(user: UserPublic = Depends(get_current_user)):

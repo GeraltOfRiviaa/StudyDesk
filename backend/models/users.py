@@ -20,7 +20,7 @@ class UserUpdate(UpdateModel):
         return v.lower() if v else v
 
 class UserChangePassword(UpdateModel):
-    old_password: Password
+    old_password: str = Field(min_length=8)
     new_password: Password
 
 class UserDelete(BaseModel):

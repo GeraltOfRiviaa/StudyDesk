@@ -8,6 +8,7 @@ import { InputGroup, InputGroupInput } from "@/components/ui/input-group"
 import { toast } from "@/components/ui/toast"
 import { ChangePasswordSchema } from "@/schemas"
 import { api } from "@/api/client"
+import { authRateLimitMessage } from "@/api/accountApi"
 
 const FIELDS = [
     { name: "oldPassword", label: "Current password", autoComplete: "current-password" },
@@ -36,7 +37,7 @@ function ChangePassword() {
         } catch (err) {
             toast.add({
                 title: "Could not change the password",
-                description: err.status === 400 ? "Current password is incorrect" : "Try again later",
+                description: authRateLimitMessage(err) ?? (err.status === 400 ? "Current password is incorrect" : "Try again later"),
                 type: "error",
             })
         }

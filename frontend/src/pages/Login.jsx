@@ -9,6 +9,7 @@ import { toast, Toaster } from "@/components/ui/toast"
 import { LoginSchema } from "../schemas"
 import { useUser } from "@/context/AuthContext"
 import { api } from "@/api/client"
+import { authRateLimitMessage } from "@/api/accountApi"
 
 function Login() {
     const { refreshUser } = useUser()
@@ -30,10 +31,10 @@ function Login() {
             /*Load the user before navigating, otherwise the Layout bounces you back*/
             await refreshUser()
             navigate("/")
-        } catch {
+        } catch (error) {
             toast.add({
                 title: "Could not authenticate a user",
-                description: "Wrong password or username",
+                description: authRateLimitMessage(error) ?? "Wrong password or username",
                 type: "error",
             })
         }

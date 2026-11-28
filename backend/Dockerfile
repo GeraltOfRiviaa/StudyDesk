@@ -2,6 +2,9 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+# Forwarded addresses only count when a deployment explicitly trusts its ingress.
+ENV FORWARDED_ALLOW_IPS=""
+
 COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
