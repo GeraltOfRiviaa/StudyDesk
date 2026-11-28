@@ -1,1 +1,8 @@
 node_modules
+.vite
+.cache
+dist
+coverage
+.git
+*.log
+.env*

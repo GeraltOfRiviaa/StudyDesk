@@ -18,7 +18,6 @@ from core.tags import (
 from models.tag import PaginatedTags, TagCreate, TagPublic, TagUpdate, TagDetail, TagUsage
 from models.users import UserPublic
 from models.types import PyObjectId, Tag
-from database import db
 from core.security import get_account_writer, get_current_user
 
 router = APIRouter(prefix="/tags", tags=["Tags"])
@@ -61,7 +60,7 @@ async def get_library_tags(
 
 @router.post("/lookup", response_model=list[TagPublic])
 async def lookup_tags(
-    ids: Annotated[list[PyObjectId], Body(embed=True)],
+    ids: Annotated[list[PyObjectId], Body(embed=True, max_length=100)],
     user: UserPublic = Depends(get_current_user),
 ):
     object_ids = list({ObjectId(tag_id) for tag_id in ids})

@@ -11,7 +11,7 @@ import {
 import { Link } from "react-router-dom";
 import { useUser } from "@/context/AuthContext"
 import { Spinner } from "./ui/spinner";
-import { toast } from "@/components/ui/toast"
+import { toast } from "@/lib/toast"
 import {ModeToggle} from '@/components/ThemeToggle'
 
 

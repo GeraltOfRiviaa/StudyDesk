@@ -109,7 +109,7 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["Authorization", "Content-Type", CSRF_REQUEST_HEADER],
-        expose_headers=["Retry-After"],
+        expose_headers=["Retry-After", notes.HAS_MORE_HEADER, notes.NEXT_CURSOR_HEADER],
     )
     return app
 

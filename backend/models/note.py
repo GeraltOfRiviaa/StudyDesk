@@ -28,6 +28,10 @@ class NotePublic(NoteBase):
     created_at: AwareDatetime
     updated_at: AwareDatetime
 
+class NoteCreated(BaseModel):
+    inserted_id: PyObjectId
+
+
 class NoteListItem(NoteBase):
     id: PyObjectId
     created_at: AwareDatetime

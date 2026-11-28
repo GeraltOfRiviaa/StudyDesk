@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, Field, AwareDatetime, model_validator
+from pydantic import BaseModel, ConfigDict, AwareDatetime, model_validator
 from models.types import PyObjectId, RepetitionTypesEnum, Interval, TargetDays, Title, Tags, Description, Exceptions, Reminders, UpdateModel
 from pydantic_extra_types.timezone_name import TimeZoneName
 from datetime import datetime, timezone, timedelta

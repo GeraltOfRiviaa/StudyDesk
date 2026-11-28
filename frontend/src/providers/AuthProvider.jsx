@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { api, registerSessionVerification } from "@/api/client"
 import { AuthContext } from "../context/AuthContext"
 import { useQueryClient } from "@tanstack/react-query"
-import { toast } from "@/components/ui/toast"
+import { toast } from "@/lib/toast"
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null)

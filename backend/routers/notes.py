@@ -1,9 +1,9 @@
 from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from core.collections import ITEM_COLLECTIONS
 from core.items import delete_item, delete_items, get_item, prepare_item_create, prepare_item_update
 from core.notes import to_note
-from models.note import NoteCreate, NoteUpdate, NoteListItem, NotePublic
+from models.note import NoteCreate, NoteCreated, NoteUpdate, NoteListItem, NotePublic
 from models.users import UserPublic
 from database import db
 from core.security import get_account_writer, get_current_user
@@ -15,13 +15,15 @@ from core.search import ItemSort, TagMatch, filtered_list
 
 router = APIRouter(prefix="/notes", tags=["Notes"])
 notes_collection = db[ITEM_COLLECTIONS[TypesEnum.note]]
+HAS_MORE_HEADER = "X-Has-More"
+NEXT_CURSOR_HEADER = "X-Next-Cursor"
 
 
 
 
 # Create note
 
-@router.post(path='/', status_code=201)
+@router.post(path='/', status_code=201, response_model=NoteCreated)
 async def create_note(note: NoteCreate, user: UserPublic = Depends(get_account_writer)):
     doc = await prepare_item_create(user.id, note.title, note.tags)
     doc["content"] = note.content
@@ -47,8 +49,17 @@ async def get_note(note_id: PyObjectId, user: UserPublic = Depends(get_current_u
 # Get all notes filtered by tags + specified 
 # ids (usefull when pinning a note or for single view) 
 
-@router.get(path='/', status_code=200, response_model=list[NoteListItem])
+@router.get(
+    path="/",
+    status_code=200,
+    response_model=list[NoteListItem],
+    responses={200: {"headers": {
+        HAS_MORE_HEADER: {"description": "Whether another page exists", "schema": {"type": "boolean"}},
+        NEXT_CURSOR_HEADER: {"description": "Cursor for the next page, when available", "schema": {"type": "string"}},
+    }}},
+)
 async def filtered_list_notes(
+    response: Response,
     q: Annotated[Title | None, Query()] = None,
     ids: Annotated[list[PyObjectId] | None, Query(max_length=100)] = None,
     tags: Annotated[list[PyObjectId] | None, Query(max_length=100)] = None,
@@ -59,18 +70,22 @@ async def filtered_list_notes(
     order: Literal["asc", "desc"] = "desc",
     user: UserPublic = Depends(get_current_user),
 ):
-    result =  await filtered_list(
-            user_id=user.id,
-            collections=["notes"],
-            q=q,
-            ids=ids,
-            tags=tags,
-            match=match,
-            limit=limit,
-            cursor=cursor,
-            sort=sort,
-            order=order
-        )
+    result = await filtered_list(
+        user_id=user.id,
+        collections=["notes"],
+        q=q,
+        ids=ids,
+        tags=tags,
+        match=match,
+        limit=limit,
+        cursor=cursor,
+        sort=sort,
+        order=order,
+    )
+    # Keep the list body for existing clients and expose the cursor separately.
+    response.headers[HAS_MORE_HEADER] = str(result.has_more).lower()
+    if result.next_cursor is not None:
+        response.headers[NEXT_CURSOR_HEADER] = result.next_cursor
     return result.items
 
 

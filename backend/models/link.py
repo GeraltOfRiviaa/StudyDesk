@@ -26,3 +26,20 @@ class LinkPublic(LinkBase):
     id: PyObjectId
     user_id: PyObjectId
     created_at: AwareDatetime
+
+
+class LinkSearchItem(BaseModel):
+    id: PyObjectId
+    type: TypesEnum
+    title: str
+
+
+class LinkedItem(BaseModel):
+    link_id: PyObjectId
+    item_id: PyObjectId
+    item_type: TypesEnum
+    title: str
+
+
+class LinkDeleted(BaseModel):
+    deleted: int

@@ -6,7 +6,7 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pymongo.errors import DuplicateKeyError
 
-from models.link import LinkBase, LinkObjectId, LinkPublic
+from models.link import LinkBase, LinkDeleted, LinkedItem, LinkObjectId, LinkPublic, LinkSearchItem
 from models.users import UserPublic
 from models.types import TypesEnum
 from database import db
@@ -29,7 +29,7 @@ links_collection = db["links"]
 # Can exclude the source item and already linked items
 
 
-@router.get("/items", status_code=200)
+@router.get("/items", status_code=200, response_model=list[LinkSearchItem])
 async def search_link_items(
     q: Annotated[str, Query(min_length=1, max_length=150)],
     item_type: TypesEnum | None = None,
@@ -122,7 +122,7 @@ async def search_link_items(
 # Returns linked item titles for the frontend
 # to have working LinksSelector
 
-@router.get("/{item_type}/{item_id}", status_code=200)
+@router.get("/{item_type}/{item_id}", status_code=200, response_model=list[LinkedItem])
 async def get_item_links(
     item_type: TypesEnum,
     item_id: LinkObjectId,
@@ -260,7 +260,7 @@ async def create_link(
 
 # D1 - delete a link by its ID
 
-@router.delete("/{link_id}", status_code=200)
+@router.delete("/{link_id}", status_code=200, response_model=LinkDeleted)
 async def delete_link(
     link_id: LinkObjectId,
     user: UserPublic = Depends(get_account_writer),

@@ -9,7 +9,7 @@ import { useForm, Controller } from "react-hook-form"
 import { UpdateUserSchema } from '../schemas'
 import { api } from '@/api/client'
 import { identityConflictMessage } from "@/api/accountApi"
-import { toast } from "@/components/ui/toast"
+import { toast } from "@/lib/toast"
 import { useUser} from "@/context/AuthContext"
 import { DeleteAccountButton } from "@/components/settings/DeleteAccountButton"
 

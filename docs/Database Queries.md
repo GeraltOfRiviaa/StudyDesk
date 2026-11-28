@@ -1,11 +1,17 @@
-# Queries
+# Database queries and workflows
 
-A complete list of all the queries that will be in the database at use with variable frequency of use.
+This catalog includes implemented workflows and planned Files, Events, Forms, and Dashboard containers. The API serves interactive documentation at `/docs` and the OpenAPI schema at `/openapi.json`.
+
+- `GET /library` returns cursor pages. `GET /notes/` returns a list with `X-Has-More` and, when applicable, `X-Next-Cursor`.
+- Tag pickers use cursor pages from `GET /tags/library`. `POST /tags/lookup` resolves up to 100 owned IDs per request.
+- `POST /notes/` returns `inserted_id`. The client uses it to create selected links through `POST /links/`.
+- Title and tag name searches use escaped case-insensitive substring regex.
+
 ## Users
 
-- **F1** Find a user by their email (used when logging in, and to check an email isn't already taken)
+- **F1** Check whether a lowercased email is already in use at registration or profile update.
 - **F2** Find a user by their ID
-- **F3** Find user by their username
+- **F3** Find a user by their case-sensitive username during password login.
 - **A1** Create a new user
 - **C1** Change user details
 
@@ -24,7 +30,7 @@ A complete list of all the queries that will be in the database at use with vari
 - **C2** Add or remove one tag/link on an item
 - **D1** Delete an item (and its links)
 
-## Archive 
+## Files (planned)
 
 - **F1** Show everything of that type (tag or not)
 - **F2** Show only items with no tags
@@ -38,7 +44,7 @@ A complete list of all the queries that will be in the database at use with vari
 - **C2** Add or remove one tag/link on an item
 -  **D1** Delete an item (its links and file from disk)
 
-## Calendar Events
+## Events (planned)
 
 - **F1** Show everything of that type (tag or not)
 - **F2** Show only items with no tags
@@ -52,7 +58,7 @@ A complete list of all the queries that will be in the database at use with vari
 - **C1** Edit an item (title, content, tags, event times)
 - **C2** Add or remove one tag/link on an item
 - **D1** Delete an item (and its links)
-## Forms
+## Forms (planned)
 
 - **F1** Show everything of that type (tag or not)
 - **F2** Show only items with no tags
@@ -90,9 +96,9 @@ A complete list of all the queries that will be in the database at use with vari
 - **F1** Get every link connected to one item
 - **F2** Check whether two items are already linked
 - **A1** Create a link between two items (check both exist, belong to the user, and aren't already linked)
-- **D1** Delete a link with specified items ID
+- **D1** Delete a link by its link ID.
 
-## Containers
+## Containers (planned)
 
 - **F1** Get all of a user's containers (runs every time the dashboard opens)
 - **F2** Get one container
@@ -103,9 +109,9 @@ A complete list of all the queries that will be in the database at use with vari
 - **D1** Delete a container without touching the items or tags inside it
 
 
-## Master Tags
+## Tags
 
-- **F1** Get all of a user's tags. Takes only the user.
+- **F1** Browse a user's tags in bounded pages.
 - **F2** Find tags by their display name. Multiple tags may share the same name and are identified by their IDs.
 - **F3** Check that a list of tags really belongs to the user. Takes the user plus a list of tag IDs. It checks that every ID in the list exists and belongs to that user (find those IDs, then compare the count). It runs before saving an item or container with tags.
 - **A1** Create a new tag
@@ -117,9 +123,4 @@ A complete list of all the queries that will be in the database at use with vari
 ## Additional
 
 - **F1** Show items of all types together in one list
-
-# Usage
-
-
-![[QueriesByUse.png]]
 
