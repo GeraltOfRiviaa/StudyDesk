@@ -12,6 +12,7 @@ from models.types import TypesEnum
 from database import db
 from core.security import get_account_writer, get_current_user
 from core.items import get_item
+from core.indexes import LINK_PAIR_KEYS
 from core.links import item_links_query, link_exists, normalize_link, to_link
 
 import re
@@ -240,11 +241,14 @@ async def create_link(
 
     try:
         result = await links_collection.insert_one(doc)
-    except DuplicateKeyError:
+    except DuplicateKeyError as error:
+        # Only a confirmed pair conflict can be reconciled by the frontend as an existing link.
+        pattern = (error.details or {}).get("keyPattern")
+        same_pair = pattern == dict(LINK_PAIR_KEYS) or (not pattern and await link_exists(user.id, pair))
         raise HTTPException(
             status_code=409,
-            detail="Items are already linked",
-        )
+            detail="Items are already linked" if same_pair else "Link conflicts with an existing record",
+        ) from None
 
     doc["_id"] = result.inserted_id
 

@@ -106,7 +106,7 @@ A complete list of all the queries that will be in the database at use with vari
 ## Master Tags
 
 - **F1** Get all of a user's tags. Takes only the user.
-- **F2** Find a tag by its name (to stop duplicates)
+- **F2** Find tags by their display name. Multiple tags may share the same name and are identified by their IDs.
 - **F3** Check that a list of tags really belongs to the user. Takes the user plus a list of tag IDs. It checks that every ID in the list exists and belongs to that user (find those IDs, then compare the count). It runs before saving an item or container with tags.
 - **A1** Create a new tag
 - **C1** Rename a tag or change its colour

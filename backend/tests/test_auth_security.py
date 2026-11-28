@@ -51,7 +51,7 @@ class MemoryUsers:
             },
         }
 
-    async def find_one(self, query, projection=None):
+    async def find_one(self, query, projection=None, *, collation=None):
         if "$or" in query:
             for alternative in query["$or"]:
                 if match := await self.find_one(alternative):
@@ -77,6 +77,7 @@ class MemoryUsers:
 
 class AuthenticationTests(unittest.TestCase):
     def setUp(self):
+        self.enterContext(patch("main.initialize_indexes", AsyncMock()))
         self.settings = self.enterContext(patch.dict(os.environ, {
             "JWT_SECRET": SECRET,
             "FRONTEND_ORIGINS": ORIGIN,

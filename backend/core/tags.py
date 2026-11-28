@@ -6,18 +6,17 @@ from typing import Any, Literal
 
 from bson import ObjectId
 from fastapi import HTTPException
-from pymongo.collation import Collation
 from pymongo.errors import PyMongoError
 
 from models.tag import PaginatedTags, TagPublic
 from database import db
 from core.collections import ITEM_COLLECTIONS
+from core.indexes import TAG_NAME_COLLATION
 from core.search import decode_cursor, encode_cursor_payload
 
 
 tags_collection = db["tags"]
 logger = logging.getLogger(__name__)
-TAG_NAME_COLLATION = Collation(locale="en", strength=2)
 TagSort = Literal["name", "created_at", "updated_at"]
 
 def to_tag(doc: dict) -> TagPublic:

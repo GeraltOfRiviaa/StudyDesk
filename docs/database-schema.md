@@ -20,8 +20,8 @@ The diagram's container types are `note`, `archive`, `calendar`, and `form`. Cur
 | Field | Type | Description |
 |---|---|---|
 | `_id` | ObjectId | Primary key |
-| `nickname` | string | Unique |
-| `email` | string | Unique |
+| `username` | string | Unique, case-sensitive |
+| `email` | string | Unique, stored entirely in lowercase |
 | `password_hash` | string | Password hash |
 | `created_at` | date | Creation date |
 | `updated_at` | date | Last update |
@@ -132,7 +132,7 @@ Separate collection; responses are not embedded in forms.
 |---|---|---|
 | `_id` | ObjectId | Primary key |
 | `user_id` | ObjectId | References users |
-| `name` | string | Tag name |
+| `name` | string | Display name. An account can have several tags with the same name. |
 | `color` | string | Tag color |
 | `created_at` | date | Creation date |
 | `updated_at` | date | Last update |
@@ -209,6 +209,32 @@ Parent: `containers.layout`.
 | events | repetition, exceptions, reminders | Embedded |
 | containers | layout | Embedded |
 | items | links | Polymorphic references to either endpoint |
+
+## Baseline indexes
+
+The FastAPI lifespan initializes these 17 secondary indexes on nine collections. MongoDB also creates its standard `_id_` index for each collection. Simple (binary) collation is explicit on each baseline index except the tag name sort.
+
+| Collection | Index name | Ordered keys | Purpose |
+|---|---|---|---|
+| `users` | `users_email_unique` | `email: 1` | Unique email identity after registration and profile writes lowercase the complete address |
+| `users` | `users_username_unique` | `username: 1` | Unique, case-sensitive username for registration and username/password login |
+| `tags` | `tags_owner_name_id` | `user_id: 1, name: 1, _id: 1` | Tag Library name order and cursor with English collation, strength 2. Duplicate names are allowed. |
+| `tags` | `tags_owner_updated_id` | `user_id: 1, updated_at: -1, _id: -1` | Owner and date keys for Tag Library recent-first reads. The current English-collated query can still require a sort. |
+| `notes`, `files`, `events`, `forms` | `<collection>_owner_tags` | `user_id: 1, tags: 1` | Owner-scoped tag membership filters and reference cleanup |
+| `notes`, `files`, `events`, `forms` | `<collection>_owner_updated_id` | `user_id: 1, updated_at: -1, _id: -1` | Owner prefix and owner-scoped updated-date reads with an ID tie-breaker |
+| `links` | `links_pair_unique` | `user_id: 1, item_a_type: 1, item_a_id: 1, item_b_type: 1, item_b_id: 1` | Unique canonical typed pairs and left-endpoint lookups through the prefix |
+| `links` | `links_owner_b` | `user_id: 1, item_b_type: 1, item_b_id: 1` | Right-endpoint lookups for bidirectional reads and cleanup |
+| `containers` | `containers_owner_filter_tags` | `user_id: 1, filter_tags: 1` | Owner-prefix retrieval and owner-scoped tag reference cleanup |
+| `form_responses` | `form_responses_owner_form_created` | `user_id: 1, form_id: 1, created_at: -1` | Planned owner/form response history and owner-scoped cleanup |
+| `form_responses` | `form_responses_form` | `form_id: 1` | Form dependency checks and cleanup by form ID, which is outside the owner prefix |
+
+Only the two user identity indexes and the canonical link pair index are unique. Startup creates missing collections as empty, indexed collections. Files, events, forms, containers and form responses receive the baseline indexes before their dedicated features are implemented.
+
+MongoDB indexes the individual values of each `tags` or `filter_tags` array. These multikey indexes can narrow membership queries. Multi-tag and exact-array filters may still require fetching and checking documents. The Library still performs a global sort after `$unionWith`. A per-collection date index can support that collection's own sorted reads.
+
+Title search uses case-insensitive substring regex. The owner prefix can limit the candidates, and the regex is evaluated against those titles. Calendar and recurrence indexes are deferred until their actual queries are implemented.
+
+Run the [read-only deployment preflight](../README.md#database-index-deployment) before starting the updated API against an existing database.
 
 ## Implementation guidance (agreed design direction)
 

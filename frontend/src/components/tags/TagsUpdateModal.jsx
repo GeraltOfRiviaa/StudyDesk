@@ -31,10 +31,10 @@ export function UpdateTag({ tag, onUpdated, onClose, onChanged }) {
             toast.add({ title: "Tag updated", type: "success" });
             onUpdated?.(updatedTag);
             onClose?.();
-        } catch (err) {
+        } catch {
             toast.add({
                 title: "Could not update tag",
-                description: err?.status === 409 ? "Tag already exists" : "Try again later",
+                description: "Try again later",
                 type: "error",
             });
         }

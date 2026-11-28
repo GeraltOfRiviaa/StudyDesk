@@ -4,7 +4,6 @@ from typing import Annotated, Literal
 from bson import ObjectId
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from pymongo import ReturnDocument
-from pymongo.errors import DuplicateKeyError
 
 from core.tags import (
     TAG_NAME_COLLATION,
@@ -112,10 +111,7 @@ async def create_tag(tag: TagCreate, user: UserPublic = Depends(get_account_writ
         "created_at": now, 
         "updated_at": now,
     }
-    try:
-        result = await tags_collection.insert_one(doc)
-    except DuplicateKeyError:
-        raise HTTPException(status_code=409, detail="Tag already exists")
+    result = await tags_collection.insert_one(doc)
     doc["_id"] = result.inserted_id
     return to_tag(doc)
 
@@ -129,17 +125,11 @@ async def update_tag(tag_id: PyObjectId, data: TagUpdate, user: UserPublic = Dep
     if not changes:
         raise HTTPException(status_code=400, detail="Nothing to update")
     changes["updated_at"] = datetime.now(timezone.utc)
-    try:
-        result = await tags_collection.find_one_and_update(
-            {"_id": ObjectId(tag_id), "user_id": ObjectId(user.id)},
-            {"$set": changes},
-            return_document=ReturnDocument.AFTER,
-        )
-    # if user tries to rename a tag into something already in database it will collide with the index
-    # that ensures that when user rename Math to Bio but Bio already exists it stops the user
-    # from creating a second tag with identical name
-    except DuplicateKeyError:
-        raise HTTPException(status_code=409, detail="Tag already exists")
+    result = await tags_collection.find_one_and_update(
+        {"_id": ObjectId(tag_id), "user_id": ObjectId(user.id)},
+        {"$set": changes},
+        return_document=ReturnDocument.AFTER,
+    )
     if result is None:
         raise HTTPException(status_code=404, detail="Tag not found")
     return to_tag(result)

@@ -93,6 +93,24 @@ The lock coordinates one API process. Standalone MongoDB cannot roll back work a
 
 Run the backend regression suite with the command above. To include database operator tests, set `STUDYDESK_INTEGRITY_MONGO_PORT` to the published loopback port of a disposable MongoDB instance. The tests create and remove their own database on that instance. From `frontend`, run `node --test tests/bulkApi.test.js` to check client batching and partial progress.
 
+### Database index deployment
+
+Before deploying to an existing database, pause API writes and development Watch. With the target MongoDB running, use the current backend code to run the read-only preflight:
+
+```powershell
+docker compose -f docker-compose.dev.yml run --build --rm --no-deps api python -m core.indexes --check
+```
+
+For a non-Compose deployment, set `MONGO_URL` to the target MongoDB connection in the shell or deployment environment. From `backend`, run `python -m core.indexes --check` with the backend dependencies installed. Both commands inspect the same `studydesk` database that FastAPI uses.
+
+The command reports pending index names and counts of invalid, noncanonical or conflicting user and link records without printing identity values. Missing indexes alone are expected on a fresh installation. A nonzero exit requires review before rollout. Incompatible names, options, or legacy constraints need an explicit deployment decision, and conflicting records need a separately approved repair. The preflight checks link keys and canonical order. It does not check whether either linked item exists.
+
+Start or recreate the backend after a passing check. Its database role needs to read the target collections, list their indexes and create indexes. Startup checks existing definitions on every launch. Before building a missing unique index, it checks the affected collection's data. It then creates the missing baseline indexes and any corresponding empty collections. A build failure blocks API startup and names the affected index. Any earlier successful builds remain available on retry. Startup never replaces or drops an index.
+
+The database enforces exact stored identity keys. External writers must apply the same lowercase email and canonical typed link rules as the API. Rerun the preflight after an import.
+
+To rerun the index regressions, use `STUDYDESK_INTEGRITY_MONGO_PORT` as above. Run `node --test tests/*.test.js` from `frontend` to include the link and identity conflict tests.
+
 ### Logs (in a second terminal)
 ```
 docker compose -f docker-compose.dev.yml logs -f api
@@ -222,7 +240,7 @@ These checks keep invalid or malicious data out of the system even before the da
 The application utilizes a non-relational database structure managed via MongoDB and accessed via FastAPI. To maintain high performance and prevent data synchronization issues, collections are strictly decoupled—containers only store UI layouts and filter strings, while cross-widget relationships are isolated in a dedicated links collection.
 
 <img width="3408" height="4848" alt="Database" src="https://github.com/user-attachments/assets/db802f8e-6700-4cad-b530-e2a698e90615" />
-<img width="1626" height="2589" alt="Indexes" src="https://github.com/user-attachments/assets/d49cf1cf-a75f-4f37-9266-b25129b18dee" />
+[Database schema and baseline index definitions](docs/database-schema.md#baseline-indexes)
 
 
 

@@ -8,7 +8,7 @@ import { InputGroup, InputGroupInput } from "@/components/ui/input-group"
 import { toast, Toaster } from "@/components/ui/toast"
 import { RegisterSchema } from "../schemas"
 import { api } from "@/api/client"
-import { authRateLimitMessage } from "@/api/accountApi"
+import { authRateLimitMessage, identityConflictMessage } from "@/api/accountApi"
 
 function Register() {
     const navigate = useNavigate()
@@ -26,7 +26,7 @@ function Register() {
         } catch (err) {
             toast.add({
                 title: "Could not register a user",
-                description: authRateLimitMessage(err) ?? (err.status === 409 ? "Username or email already taken" : "Try again later"),
+                description: authRateLimitMessage(err) ?? await identityConflictMessage(err) ?? "Try again later",
                 type: "error",
             })
         }

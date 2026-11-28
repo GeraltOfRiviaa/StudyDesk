@@ -472,7 +472,7 @@ Lookup dictionary for tag autocompletion, badge colors, and global tag managemen
 |---|---|---|
 |`_id`|`objectId`, Required|Unique primary key for tag entry.|
 |`user_id`|`objectId`, Required|Owner ID (`users._id`). Tags are user-isolated.|
-|`name`|`string`, Required, Max length: 50|Tag label name. Unique per user via compound index.|
+|`name`|`string`, Required, Max length: 50|Tag label name. Duplicate names are allowed within the same account.|
 |`color`|`string`, Required, Pattern: `^#([A-Fa-f0-9]{6})$`|Hexadecimal color code (e.g. `#3B82F6`).|
 |`created_at`|`date`, Required|Tag creation timestamp.|
 |`updated_at`|`date`, Required|Tag modification timestamp.|
