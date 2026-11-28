@@ -17,6 +17,8 @@
 ```
    python -c "import secrets; print(secrets.token_hex(32))"
 ```
+   Use the generator for every new secret and keep the generated value private. The API requires 64 hexadecimal characters and rejects common weak patterns. These checks cannot establish randomness.
+   Replacing `JWT_SECRET` invalidates all previously issued sessions. Recreate the Compose API container after changing `.env.local` so it reads the new value. Users will need to sign in again.
 4. (Optional, for editor autocomplete) create a local venv:
 ```
    cd backend
@@ -50,6 +52,38 @@ Data is kept in the `studydesk` volume. Use `down -v` to delete it.
 | API docs | http://localhost:8000/docs             |
 | Health   | http://localhost:8000/health           |
 | MongoDB  | `mongodb://localhost:27018` (Compass)  |
+
+### Authentication settings
+
+| Setting | Local Compose value | HTTPS and Codespaces |
+|---|---|---|
+| `JWT_SECRET` | Generate it with the command above | Generate a separate secret for each deployment |
+| `FRONTEND_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Set the exact public frontend origin, including its scheme and any non-default port. Separate multiple origins with commas |
+| `AUTH_COOKIE_SECURE` | `false` | Set `true` |
+| `FORWARDED_ALLOW_IPS` | Empty | Leave empty for direct connections. Set explicit trusted ingress IPs or networks when the API is behind a proxy that sanitizes forwarded headers |
+| `VITE_API_URL` in `frontend/.env.local` | `http://localhost:8000` | Set the HTTPS API URL. For Codespaces, use the forwarded API URL and allow the forwarded frontend origin |
+
+Use matching hostnames for the local frontend and API. For example, open the frontend at `http://localhost:5173` when `VITE_API_URL` uses `localhost`. Keep the frontend and API on the same site from the browser’s point of view because the cookie uses `SameSite=Lax`. On Codespaces, use the port URLs shown in the **Ports** panel. For deployments on unrelated sites, use an HTTPS same-origin proxy for the API.
+
+The API checks the browser origin on write requests, including password login and logout. For direct clients that send neither `Origin` nor `Referer`, add `X-StudyDesk-Request: 1` to `POST`, `PUT`, `PATCH` and `DELETE` requests. When using the local Swagger UI to send requests, add its origin, such as `http://localhost:8000`, to `FRONTEND_ORIGINS`. FastAPI expects form data for login and JSON for registration, password changes and account deletion.
+
+```text
+curl.exe -X POST -H "X-StudyDesk-Request: 1" http://localhost:8000/auth/logout
+```
+
+Login permits 10 attempts per minute per IP, and registration permits 5 per 10 minutes per IP. Password changes and account deletion each permit 5 attempts per 5 minutes per account. The API returns `429` and `Retry-After` in seconds. Clients sharing an IP share a bucket, and the counters reset when the single API process restarts. The container ignores forwarded addresses by default. For a direct host launch outside Docker, use `uvicorn main:app --no-proxy-headers`.
+
+Passwords created through registration or password change must have at least eight characters and fit within bcrypt’s 72-byte UTF-8 limit. Google sign-in is postponed. The seven-day JWT is carried in an HTTP-only cookie. Logout clears the browser cookie. A copied token can still be valid until it expires, including after a password change. Deleting the account invalidates its tokens because authenticated requests check that the account exists.
+
+### Authentication regression tests
+
+From `backend`, with `requirements.txt` installed, run:
+
+```text
+python -m unittest discover -s tests -v
+```
+
+The tests use isolated in-memory records and exercise the API middleware, so they do not require a running MongoDB or seeded account.
 
 ### Logs (in a second terminal)
 ```

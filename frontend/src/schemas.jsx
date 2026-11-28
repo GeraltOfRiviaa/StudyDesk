@@ -11,12 +11,18 @@ export const PasswordField = z
     .min(8, "Password must be at least 8 characters.")
     .max(128, "Password must be at most 128 characters.")
 
+// Bcrypt limits encoded bytes, so multibyte characters can reach the limit early.
+const NewPasswordField = PasswordField.refine(
+    value => new TextEncoder().encode(value).length <= 72,
+    "Password must be at most 72 UTF-8 bytes.",
+)
+
 export const EmailField = z.email("Enter a valid email address.").max(254)
 
 export const RegisterSchema = z.object({
     username: UsernameField,
     email: EmailField,
-    password: PasswordField,
+    password: NewPasswordField,
 })
 
 export const LoginSchema = z.object({
@@ -30,7 +36,7 @@ export const UpdateUserSchema = z.object({
 
 export const ChangePasswordSchema = z.object({
     oldPassword: z.string().min(1, "Required"),
-    newPassword: PasswordField,
+    newPassword: NewPasswordField,
     confirmPassword: z.string(),
 })
 .refine(d => d.newPassword === d.confirmPassword, {

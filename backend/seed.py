@@ -87,7 +87,7 @@ async def seed_user(db, hash_password, now, create=True):
     from models.users import UserCreate
     user = UserCreate(username=USERNAME, email=EMAIL, password=PASSWORD)
     result = await db.users.insert_one({
-        'username': user.username, 'email': user.email, 'password_hash': hash_password(user.password),
+        'username': user.username, 'email': user.email, 'password_hash': await hash_password(user.password),
         'seed_marker': MARKER, 'created_at': now, 'updated_at': now,
     })
     return result.inserted_id, True

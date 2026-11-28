@@ -51,7 +51,23 @@ class QuestionInputTypeEnum(str, Enum):
 
 PyObjectId = Annotated[str, BeforeValidator(_validate_object_id)]
 Username = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_.-]{3,50}$")]
-Password = Annotated[str, StringConstraints(min_length=8, max_length=128)]
+BCRYPT_MAX_BYTES = 72
+
+
+def password_fits_bcrypt(value: str) -> bool:
+    try:
+        return len(value.encode("utf-8")) <= BCRYPT_MAX_BYTES
+    except UnicodeEncodeError:
+        return False
+
+
+def _validate_new_password(value: str) -> str:
+    if not password_fits_bcrypt(value):
+        raise ValueError("Password must be valid UTF-8 and at most 72 bytes")
+    return value
+
+
+Password = Annotated[str, StringConstraints(min_length=8), AfterValidator(_validate_new_password)]
 Tag = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
 HexColor = Annotated[str, StringConstraints(pattern=r"^#[0-9a-fA-F]{6}$")]
 Title = Annotated[str, StringConstraints(min_length=1, max_length=150)]
