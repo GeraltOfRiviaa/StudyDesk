@@ -35,12 +35,14 @@ This report covers the finding IDs assigned to Checkpoints 1–6. It records imp
 - Frontend · `github-markdown-css`.
 - Backend · `Authlib`, `cffi`, `charset-normalizer`, `cryptography`, `google-api-core`, `google-api-python-client`, `google-auth`, `google-auth-httplib2`, `google-auth-oauthlib`, `googleapis-common-protos`, `httplib2`, `joserfc`, `oauthlib`, `passlib`, `proto-plus`, `protobuf`, `pyasn1`, `pyasn1_modules`, `pycparser`, `pydantic-settings`, `pyparsing`, `requests`, `requests-oauthlib`, `uritemplate`, and `urllib3`. The deferred Google handlers still import `httpx`, which is retained and also used by the API tests.
 
+**Resolved · GHSA-rj75-hqrm-r3gf.** Tailwind Typography `0.5.20` pins `postcss-selector-parser` to the affected `6.0.10` release. A scoped npm override selects the patched `6.1.5` release for Typography. After a clean install, `npm audit` reported zero vulnerabilities and the production CSS matched the previous build byte for byte. Reconsider the override when a stable Typography release declares a patched parser version. Rerun the audit, frontend suite, lint, and production build before removing it. [GitHub advisory](https://github.com/advisories/GHSA-rj75-hqrm-r3gf) · [Typography upstream issue](https://github.com/tailwindlabs/tailwindcss-typography/issues/430)
+
 ## Environment coverage
 
 The final run passed 42 backend regressions against disposable MongoDB and 24 frontend regressions including Chrome. Full ESLint and `git diff --check` passed. Clean Python and Node dependencies installed in Docker, and `pip check` found no broken requirements.
 
 An isolated Compose project verified the local Vite fallback, API startup, registration, cookie login, authenticated reads, and logout. Recreating the frontend service with a Codespaces-style environment file confirmed that Vite received the HTTPS API URL and accepted the configured forwarded host.
 
-The production image built with `VITE_API_URL=/api` and failed with the documented configuration error when the value was omitted. A fresh Nginx container returned 200 for direct routes and a built asset, and 404 for missing assets and misrouted API requests. The frontend install reported two moderate npm advisories, and the build reported a chunk-size warning.
+The production image built with `VITE_API_URL=/api` and failed with the documented configuration error when the value was omitted. A fresh Nginx container returned 200 for direct routes and a built asset, and 404 for missing assets and misrouted API requests. The build reported a chunk-size warning.
 
 Live GitHub Codespaces port forwarding and a deployed production ingress require those environments. The deployment instructions document both configurations.
