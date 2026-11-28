@@ -1,35 +1,74 @@
-import { useMemo } from "react"
+import { useId, useMemo, useState } from "react"
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query"
 import { useUser } from "@/context/AuthContext"
 import { fetchLibrary, fetchLibraryTags } from "@/api/libraryApi"
 
-export function useLibrary(filters = {}, enabled = true) {
-    const { user } = useUser()
-
-    return useLibraryPages(["library", user?.id, filters], fetchLibrary, filters, enabled && !!user?.id)
+export function useLibrarySequence(viewKey) {
+    const instance = useId()
+    const [sequence, setSequence] = useState({ viewKey, revision: 0 })
+    if (sequence.viewKey !== viewKey) {
+        setSequence({ viewKey, revision: sequence.revision + 1 })
+    }
+    return {
+        id: `${instance}:${sequence.revision}`,
+        restart: () => setSequence(previous => ({ ...previous, revision: previous.revision + 1 })),
+    }
 }
 
-export function useLibraryTags(filters, enabled) {
+export function useLibrary(filters, enabled, sequenceId) {
     const { user } = useUser()
 
-    return useLibraryPages(["tags", user?.id, "library", filters], fetchLibraryTags, filters, enabled && !!user?.id)
+    return useLibraryPages(["library", user?.id, filters, sequenceId], fetchLibrary, filters, enabled && !!user?.id)
+}
+
+export function useLibraryTags(filters, enabled, sequenceId) {
+    const { user } = useUser()
+
+    return useLibraryPages(["tags", user?.id, "library", filters, sequenceId], fetchLibraryTags, filters, enabled && !!user?.id)
 }
 
 function getNextCursor(lastPage, pageParams) {
     const cursor = lastPage?.next_cursor
     // A cursor already in the page history cannot advance this list.
-    if (lastPage?.has_more && cursor && !pageParams.includes(cursor)) return cursor
+    if (lastPage?.has_more && typeof cursor === "string" && cursor && !pageParams.includes(cursor)) return cursor
+}
+
+class InvalidLibraryCursor extends Error {}
+
+export function libraryPageOptions(queryKey, fetchPage, filters, enabled) {
+    return {
+        queryKey,
+        queryFn: async ({ pageParam, signal }) => {
+            try {
+                return await fetchPage({ ...filters, cursor: pageParam, signal })
+            } catch (error) {
+                if (pageParam && error instanceof Response && error.status === 422) {
+                    const body = await error.clone().json().catch(() => null)
+                    if (body?.detail === "Invalid cursor") {
+                        throw new InvalidLibraryCursor("Invalid cursor", { cause: error })
+                    }
+                }
+                throw error
+            }
+        },
+        initialPageParam: null,
+        getNextPageParam: (lastPage, _pages, _lastParam, pageParams) => getNextCursor(lastPage, pageParams),
+        // Each view revision has its own pages. Remove superseded entries after the observer leaves.
+        gcTime: 0,
+        retry: (count, error) => count < 1 && !(error instanceof InvalidLibraryCursor),
+        refetchOnReconnect: query => !(query.state.error instanceof InvalidLibraryCursor),
+        enabled,
+    }
+}
+
+export function hasUnusableContinuation(query) {
+    return query.error instanceof InvalidLibraryCursor ||
+        (!!query.data?.pages.at(-1)?.has_more && !query.hasNextPage)
 }
 
 function useLibraryPages(queryKey, fetchPage, filters, enabled) {
     const queryClient = useQueryClient()
-    const query = useInfiniteQuery({
-        queryKey,
-        queryFn: ({ pageParam, signal }) => fetchPage({ ...filters, cursor: pageParam, signal }),
-        initialPageParam: null,
-        getNextPageParam: (lastPage, _pages, _lastParam, pageParams) => getNextCursor(lastPage, pageParams),
-        enabled,
-    })
+    const query = useInfiniteQuery(libraryPageOptions(queryKey, fetchPage, filters, enabled))
 
     const { data } = query
     const items = useMemo(() => {
@@ -43,14 +82,14 @@ function useLibraryPages(queryKey, fetchPage, filters, enabled) {
         }
         return [...rows.values()]
     }, [data])
-    const lastPage = data?.pages.at(-1)
-    const nextCursor = query.hasNextPage ? lastPage.next_cursor : null
+    const hasInvalidCursor = hasUnusableContinuation(query)
+    const nextCursor = !hasInvalidCursor && query.hasNextPage ? data.pages.at(-1).next_cursor : null
 
     const fetchNextPage = () => {
         // A refresh can change the cursor before React updates this view.
         const state = queryClient.getQueryState(queryKey)
         const latest = state?.data
-        if (!nextCursor || state?.fetchStatus !== "idle" ||
+        if (!nextCursor || state?.fetchStatus !== "idle" || state.error instanceof InvalidLibraryCursor ||
             nextCursor !== getNextCursor(latest?.pages.at(-1), latest?.pageParams)) return false
 
         void query.fetchNextPage({ cancelRefetch: false })
@@ -64,7 +103,7 @@ function useLibraryPages(queryKey, fetchPage, filters, enabled) {
         isError: query.isError,
         fetchStatus: query.fetchStatus,
         nextCursor,
-        hasInvalidCursor: !!lastPage?.has_more && !query.hasNextPage,
+        hasInvalidCursor,
         fetchNextPage,
         isFetchingNextPage: query.isFetchingNextPage,
         isFetchNextPageError: query.isFetchNextPageError,

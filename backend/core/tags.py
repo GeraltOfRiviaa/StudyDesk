@@ -11,8 +11,8 @@ from pymongo.errors import PyMongoError
 from models.tag import PaginatedTags, TagPublic
 from database import db
 from core.collections import ITEM_COLLECTIONS
-from core.indexes import TAG_NAME_COLLATION
-from core.search import decode_cursor, encode_cursor_payload
+from core.indexes import SIMPLE_COLLATION, TAG_NAME_COLLATION
+from core.pagination import CursorBoundary, cursor_fingerprint, decode_cursor, encode_cursor
 
 
 tags_collection = db["tags"]
@@ -36,23 +36,11 @@ def build_tag_list_query(user_id: str, q: str | None) -> dict[str, Any]:
     return query
 
 
-def tag_cursor_filter(cursor: str, sort: TagSort, direction: int) -> dict[str, Any]:
-    data = decode_cursor(cursor, validate=True)
-    value_type = str if sort == "name" else datetime
-    if (
-        not isinstance(data, dict)
-        or data.get("sort") != sort
-        or type(data.get("direction")) is not int
-        or data["direction"] != direction
-        or not isinstance(data.get("value"), value_type)
-        or not isinstance(data.get("id"), ObjectId)
-    ):
-        raise HTTPException(status_code=400, detail="Invalid cursor")
-
+def tag_cursor_filter(boundary: CursorBoundary, sort: TagSort, direction: int) -> dict[str, Any]:
     operator = "$gt" if direction == 1 else "$lt"
     return {"$or": [
-        {sort: {operator: data["value"]}},
-        {sort: data["value"], "_id": {operator: data["id"]}},
+        {sort: {operator: boundary.value}},
+        {sort: boundary.value, "_id": {operator: boundary.item_id}},
     ]}
 
 
@@ -64,14 +52,20 @@ async def list_library_tags(
     limit: int,
     cursor: str | None,
 ) -> PaginatedTags:
-    query = build_tag_list_query(user_id, q.strip() if q else None)
+    q = q.strip() if q else ""
+    query = build_tag_list_query(user_id, q)
+    fingerprint = cursor_fingerprint(
+        mode="tags", owner=str(query["user_id"]), search=q, sort=sort, order=order,
+    )
     direction = 1 if order == "asc" else -1
     if cursor is not None:
-        query.update(tag_cursor_filter(cursor, sort, direction))
+        boundary = decode_cursor(cursor, fingerprint, text_limit=50 if sort == "name" else None)
+        query.update(tag_cursor_filter(boundary, sort, direction))
 
+    # Use the same collation for the sort and its cursor comparisons.
     docs = await (
         tags_collection.find(query)
-        .collation(TAG_NAME_COLLATION)
+        .collation(TAG_NAME_COLLATION if sort == "name" else SIMPLE_COLLATION)
         .sort([(sort, direction), ("_id", direction)])
         .limit(limit + 1)
         .to_list(length=limit + 1)
@@ -81,12 +75,7 @@ async def list_library_tags(
     next_cursor = None
     if has_more:
         last = docs[-1]
-        next_cursor = encode_cursor_payload({
-            "sort": sort,
-            "direction": direction,
-            "value": last[sort],
-            "id": last["_id"],
-        })
+        next_cursor = encode_cursor(CursorBoundary(last[sort], last["_id"]), fingerprint)
 
     return PaginatedTags(
         items=[to_tag(doc) for doc in docs],
