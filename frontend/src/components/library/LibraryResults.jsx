@@ -33,12 +33,12 @@ function LoadingRows({ itemsMode, count, label }) {
     )
 }
 
-function ResultsError({ message, onRetry, retrying }) {
+function ResultsError({ message, onRetry, retrying, action = "Retry" }) {
     return (
         <div className="flex flex-col items-center gap-2 px-3 py-4 text-center">
             <p role="status" className="text-sm">{message}</p>
             <Button type="button" size="sm" variant="outline" disabled={retrying} onClick={onRetry}>
-                Retry
+                {action}
             </Button>
         </div>
     )
@@ -46,7 +46,7 @@ function ResultsError({ message, onRetry, retrying }) {
 
 export function LibraryResults({
     itemsMode, query, rows, itemTags, selected, onToggle,
-    initialLoading, initialError, initialRetrying, onInitialRetry, restricted, onReset,
+    initialLoading, initialError, initialRetrying, onInitialRetry, onReload, restricted, onReset,
 }) {
     const noun = itemsMode ? "items" : "tags"
     const busy = query.fetchStatus !== "idle"
@@ -89,7 +89,7 @@ export function LibraryResults({
                     {query.isFetchingNextPage ? (
                         <LoadingRows itemsMode={itemsMode} count={2} label={`Loading more ${noun}`} />
                     ) : query.hasInvalidCursor ? (
-                        <ResultsError message={`Could not continue loading ${noun}.`} onRetry={refresh} retrying={busy} />
+                        <ResultsError message={`Could not continue loading ${noun}.`} onRetry={onReload} retrying={busy} action="Reload results" />
                     ) : query.isRefetchError ? (
                         <ResultsError message={`Could not refresh Library ${noun}.`} onRetry={refresh} retrying={busy} />
                     ) : retryPage ? (

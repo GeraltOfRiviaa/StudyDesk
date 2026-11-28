@@ -10,7 +10,7 @@ from core.security import get_account_writer, get_current_user
 from typing import Annotated, Literal
 from models.types import PyObjectId, Title, TypesEnum
 from pymongo import ReturnDocument
-from core.search import filtered_list
+from core.search import ItemSort, TagMatch, filtered_list
 
 
 router = APIRouter(prefix="/notes", tags=["Notes"])
@@ -52,10 +52,10 @@ async def filtered_list_notes(
     q: Annotated[Title | None, Query()] = None,
     ids: Annotated[list[PyObjectId] | None, Query(max_length=100)] = None,
     tags: Annotated[list[PyObjectId] | None, Query(max_length=100)] = None,
-    match: Literal["none", "any", "all", "exact"] | None = None,
+    match: TagMatch | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     cursor: str | None = None,
-    sort: Literal["updated_at", "created_at", "title", "tags"] = "updated_at",
+    sort: ItemSort = "updated_at",
     order: Literal["asc", "desc"] = "desc",
     user: UserPublic = Depends(get_current_user),
 ):

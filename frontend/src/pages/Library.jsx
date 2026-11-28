@@ -14,7 +14,7 @@ import { api } from "@/api/client"
 import { useUser } from "@/context/AuthContext"
 import { useItemModal } from "@/context/ItemsModalContext"
 import { useLibraryFilters } from "@/hooks/useLibraryFilters"
-import { useLibrary, useLibraryTags } from "@/hooks/useLibrary"
+import { useLibrary, useLibrarySequence, useLibraryTags } from "@/hooks/useLibrary"
 import { useDebounce } from "@/hooks/useDebounce"
 import { useTagLookup } from "@/hooks/useTagLookup"
 import { ITEM_TYPES } from "@/lib/itemTypes"
@@ -62,20 +62,23 @@ function Library() {
 
     const handleResetFilters = () => resetFilters({ preserveItemFilters: !itemsMode })
 
-    const itemsQuery = useLibrary({
+    const itemParams = {
         ...filters,
         q: debouncedSearch,
         tags: filters.match === "none" ? [] : filters.tags,
-    }, itemsMode && !isSearchPending)
+    }
 
     const tagSort = ["title", "created_at", "updated_at"].includes(filters.sort)
         ? filters.sort
         : "updated_at"
-    const libraryTagsQuery = useLibraryTags({
+    const tagParams = {
         q: debouncedSearch.trim(),
         sort: tagSort === "title" ? "name" : tagSort,
         order: filters.order,
-    }, !itemsMode && !isSearchPending)
+    }
+    const sequence = useLibrarySequence(JSON.stringify([user?.id, itemsMode, itemsMode ? itemParams : tagParams]))
+    const itemsQuery = useLibrary(itemParams, itemsMode && !isSearchPending, sequence.id)
+    const libraryTagsQuery = useLibraryTags(tagParams, !itemsMode && !isSearchPending, sequence.id)
 
     const pickerTagsQuery = useQuery({
         queryKey: ["tags", user?.id],
@@ -104,6 +107,12 @@ function Library() {
     const retryInitialLoad = () => {
         if (listFailed) void activeQuery.refetch({ cancelRefetch: false })
         if (pickerFailed) void pickerTagsQuery.refetch({ cancelRefetch: false })
+    }
+
+    const reloadResults = () => {
+        // Reconciliation keeps selected IDs on the new first page and drops the rest.
+        setSelection(previous => ({ ...previous, autoSelect: false }))
+        sequence.restart()
     }
 
     // Refresh cached data when an item changes
@@ -275,7 +284,7 @@ function Library() {
 
                 {/* A new view gets its own scroll position and observer cursor history. */}
                 <LibraryResults
-                    key={viewKey}
+                    key={`${viewKey}:${sequence.id}`}
                     itemsMode={itemsMode}
                     query={activeQuery}
                     rows={displayedItems}
@@ -287,6 +296,7 @@ function Library() {
                     initialRetrying={(listFailed && activeQuery.fetchStatus !== "idle") ||
                         (pickerFailed && pickerTagsQuery.fetchStatus !== "idle")}
                     onInitialRetry={retryInitialLoad}
+                    onReload={reloadResults}
                     restricted={hasRestrictiveFilters(filters, itemsMode)}
                     onReset={handleResetFilters}
                 />

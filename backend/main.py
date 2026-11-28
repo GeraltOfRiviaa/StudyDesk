@@ -16,7 +16,8 @@ from core.auth_config import (
 )
 from core.indexes import initialize_indexes
 from core.limiter import AuthLimiter
-from core.search import filtered_list
+from core.pagination import InvalidCursor
+from core.search import ItemSort, TagMatch, filtered_list
 from database import db
 from models.users import UserPublic
 from models.types import PyObjectId, Title, PaginatedItems
@@ -62,12 +63,10 @@ async def get_items(
     tags: Annotated[
         list[PyObjectId] | None, Query(max_length=100)
     ] = None,
-    match: Literal["none", "any", "all", "exact"] | None = None,
+    match: TagMatch | None = None,
     limit: Annotated[int, Query(ge=1, le=50)] = 30,
     cursor: str | None = None,
-    sort: Literal[
-        "updated_at", "created_at", "title", "tags"
-    ] = "updated_at",
+    sort: ItemSort = "updated_at",
     order: Literal["asc", "desc"] = "desc",
     collections: Annotated[list[str] | None, Query()] = None,
     user: UserPublic = Depends(get_current_user),
@@ -86,10 +85,15 @@ async def get_items(
     )
 
 
+async def invalid_cursor_response(_request: Request, _error: InvalidCursor) -> JSONResponse:
+    return JSONResponse({"detail": "Invalid cursor"}, status_code=422)
+
+
 def create_app() -> FastAPI:
     origins = load_frontend_origins()
     app = FastAPI(lifespan=lifespan, swagger_ui_parameters={"persistAuthorization": True})
     app.state.frontend_origins = origins
+    app.add_exception_handler(InvalidCursor, invalid_cursor_response)
     app.include_router(users.router)
     app.include_router(notes.router)
     app.include_router(tags.router)

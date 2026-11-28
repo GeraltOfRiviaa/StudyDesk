@@ -111,6 +111,12 @@ The database enforces exact stored identity keys. External writers must apply th
 
 To rerun the index regressions, use `STUDYDESK_INTEGRITY_MONGO_PORT` as above. Run `node --test tests/*.test.js` from `frontend` to include the link and identity conflict tests.
 
+### Library pagination
+
+Use each `next_cursor` with the same effective filters, sort, and direction. A cursor rejected with HTTP 422 is recovered through **Reload results**. The Library keeps loaded rows and selection visible until you reload. Reload starts at the top with the same filters, then keeps only selected IDs present on the new first page and turns off select-all carryover.
+
+Cursor ordering is stable while the data is unchanged. Editing an item's sort value between requests can move it across a page boundary. Run the backend suite against disposable MongoDB and `node --test tests/libraryPagination.test.js` from `frontend` to rerun the pagination regressions.
+
 ### Logs (in a second terminal)
 ```
 docker compose -f docker-compose.dev.yml logs -f api

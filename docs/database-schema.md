@@ -219,7 +219,7 @@ The FastAPI lifespan initializes these 17 secondary indexes on nine collections.
 | `users` | `users_email_unique` | `email: 1` | Unique email identity after registration and profile writes lowercase the complete address |
 | `users` | `users_username_unique` | `username: 1` | Unique, case-sensitive username for registration and username/password login |
 | `tags` | `tags_owner_name_id` | `user_id: 1, name: 1, _id: 1` | Tag Library name order and cursor with English collation, strength 2. Duplicate names are allowed. |
-| `tags` | `tags_owner_updated_id` | `user_id: 1, updated_at: -1, _id: -1` | Owner and date keys for Tag Library recent-first reads. The current English-collated query can still require a sort. |
+| `tags` | `tags_owner_updated_id` | `user_id: 1, updated_at: -1, _id: -1` | Owner and date keys for Tag Library updated-date reads with matching simple collation |
 | `notes`, `files`, `events`, `forms` | `<collection>_owner_tags` | `user_id: 1, tags: 1` | Owner-scoped tag membership filters and reference cleanup |
 | `notes`, `files`, `events`, `forms` | `<collection>_owner_updated_id` | `user_id: 1, updated_at: -1, _id: -1` | Owner prefix and owner-scoped updated-date reads with an ID tie-breaker |
 | `links` | `links_pair_unique` | `user_id: 1, item_a_type: 1, item_a_id: 1, item_b_type: 1, item_b_id: 1` | Unique canonical typed pairs and left-endpoint lookups through the prefix |
@@ -230,7 +230,7 @@ The FastAPI lifespan initializes these 17 secondary indexes on nine collections.
 
 Only the two user identity indexes and the canonical link pair index are unique. Startup creates missing collections as empty, indexed collections. Files, events, forms, containers and form responses receive the baseline indexes before their dedicated features are implemented.
 
-MongoDB indexes the individual values of each `tags` or `filter_tags` array. These multikey indexes can narrow membership queries. Multi-tag and exact-array filters may still require fetching and checking documents. The Library still performs a global sort after `$unionWith`. A per-collection date index can support that collection's own sorted reads.
+MongoDB indexes the individual values of each `tags` or `filter_tags` array. These multikey indexes can narrow membership queries. Multi-tag and exact-array filters may still require fetching and checking documents. For owner-only Library reads sorted by `updated_at`, each collection applies the cursor and limits its sorted results to one page plus one row. The final global sort after `$unionWith` merges the candidates in date, type, and ID order.
 
 Title search uses case-insensitive substring regex. The owner prefix can limit the candidates, and the regex is evaluated against those titles. Calendar and recurrence indexes are deferred until their actual queries are implemented.
 
