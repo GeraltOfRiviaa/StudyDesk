@@ -1,12 +1,10 @@
-from datetime import datetime, timezone
-
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query
-from core.links import delete_item_links
+from core.collections import ITEM_COLLECTIONS
+from core.items import delete_item, delete_items, get_item, prepare_item_create, prepare_item_update
 from core.notes import to_note
-from core.tags import validate_tag_ids
-from models.note import NoteCreate,  NoteUpdate, NoteListItem, NotePublic
-from models.users import  UserPublic
+from models.note import NoteCreate, NoteUpdate, NoteListItem, NotePublic
+from models.users import UserPublic
 from database import db
 from core.security import get_account_writer, get_current_user
 from typing import Annotated, Literal
@@ -16,7 +14,7 @@ from core.search import filtered_list
 
 
 router = APIRouter(prefix="/notes", tags=["Notes"])
-notes_collection = db["notes"]
+notes_collection = db[ITEM_COLLECTIONS[TypesEnum.note]]
 
 
 
@@ -25,18 +23,8 @@ notes_collection = db["notes"]
 
 @router.post(path='/', status_code=201)
 async def create_note(note: NoteCreate, user: UserPublic = Depends(get_account_writer)):
-    uid = ObjectId(user.id)
-    now = datetime.now(timezone.utc) 
-    await validate_tag_ids(user.id, note.tags)
-    doc = {
-        "user_id": uid, 
-        "title": note.title, 
-        "content": note.content, 
-        "tags": [ObjectId(t) for t in note.tags],
-        "created_at": now, 
-        "updated_at": now
-            }
-
+    doc = await prepare_item_create(user.id, note.title, note.tags)
+    doc["content"] = note.content
     result = await notes_collection.insert_one(doc)
     return {"inserted_id": str(result.inserted_id)}
 
@@ -49,11 +37,7 @@ async def create_note(note: NoteCreate, user: UserPublic = Depends(get_account_w
 @router.get(path='/{note_id}', status_code=200, response_model=NotePublic)
 async def get_note(note_id: PyObjectId, user: UserPublic = Depends(get_current_user)):
 
-    result = await notes_collection.find_one({"_id": ObjectId(note_id), "user_id": ObjectId(user.id)})
-    
-    if not result:
-        raise HTTPException(status_code=404, detail="Note not found")
-    
+    result = await get_item(user.id, TypesEnum.note, note_id, not_found_detail="Note not found")
     return to_note(result)
 
 
@@ -96,26 +80,14 @@ async def filtered_list_notes(
 # Update note
 @router.patch(path='/{note_id}', status_code=200, response_model=NotePublic)
 async def update_note(note_id: PyObjectId, data: NoteUpdate, user: UserPublic = Depends(get_current_user)):
-    #Build the update from only the fields the client sent.
-    changes = data.model_dump(exclude_unset=True)
-    if not changes:
-        raise HTTPException(status_code=400, detail="Nothing to update")
-    #Convert special fields
-    if "tags" in changes:
-        changes["tags"] = [str(t) for t in changes["tags"]]
-        await validate_tag_ids(user.id, changes["tags"])
-        changes["tags"] = [ObjectId(t) for t in changes["tags"]]
-    
-    #Set updated_at
-    changes["updated_at"] = datetime.now(timezone.utc)
-    #Update with one query
+    changes = await prepare_item_update(user.id, data)
+    # Match the owner and return the updated Note in the same database operation.
     result = await notes_collection.find_one_and_update(
-    {"_id": ObjectId(note_id), "user_id": ObjectId(user.id)},
-    {"$set": changes},
-    return_document=ReturnDocument.AFTER,
-    )   
-    
-    #If the result is None, raise 404
+        {"_id": ObjectId(note_id), "user_id": ObjectId(user.id)},
+        {"$set": changes},
+        return_document=ReturnDocument.AFTER,
+    )
+
     if result is None:
         raise HTTPException(status_code=404, detail="Note not found")
     return to_note(result)
@@ -127,26 +99,10 @@ async def update_note(note_id: PyObjectId, data: NoteUpdate, user: UserPublic = 
 @router.delete("/{note_id}", status_code=200)
 async def delete_note(
     note_id: PyObjectId,
-    user: UserPublic = Depends(get_current_user),
+    user: UserPublic = Depends(get_account_writer),
 ):
-    result = await notes_collection.delete_one({
-        "_id": ObjectId(note_id),
-        "user_id": ObjectId(user.id)
-    })
-
-    if result.deleted_count == 0:
-        raise HTTPException(
-            status_code=404,
-            detail="Note not found"
-        )
-
-    await delete_item_links(
-        user.id,
-        TypesEnum.note,
-        [note_id]
-    )
-
-    return {"deleted": result.deleted_count}
+    deleted = await delete_item(user.id, TypesEnum.note, note_id, not_found_detail="Note not found")
+    return {"deleted": deleted}
 
 
 ########################################################
@@ -160,19 +116,7 @@ async def delete_listed_notes(
         list[PyObjectId],
         Query(min_length=1, max_length=100)
     ],
-    user: UserPublic = Depends(get_current_user),
+    user: UserPublic = Depends(get_account_writer),
 ):
-    ids = list(set(ids))
-
-    result = await notes_collection.delete_many({
-        "_id": {"$in": [ObjectId(i) for i in ids]},
-        "user_id": ObjectId(user.id)
-    })
-
-    await delete_item_links(
-        user.id,
-        TypesEnum.note,
-        ids
-    )
-
-    return {"deleted": result.deleted_count}
+    deleted = await delete_items(user.id, TypesEnum.note, ids)
+    return {"deleted": deleted}

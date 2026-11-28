@@ -1,7 +1,7 @@
-from bson import ObjectId
-from fastapi import HTTPException
+from collections.abc import Collection
 
-from core.collections import ITEM_COLLECTIONS
+from bson import ObjectId
+
 from models.link import LinkBase, LinkPublic
 from database import db
 from models.types import PyObjectId, TypesEnum
@@ -11,7 +11,7 @@ links_collection = db["links"]
 def item_links_query(
     user_id: str,
     item_type: TypesEnum,
-    item_ids: list[PyObjectId],
+    item_ids: Collection[PyObjectId | ObjectId],
 ) -> dict:
 
     ids = [ObjectId(i) for i in item_ids]
@@ -34,7 +34,7 @@ def item_links_query(
 async def delete_item_links(
     user_id: str,
     item_type: TypesEnum,
-    item_ids: list[PyObjectId],
+    item_ids: Collection[PyObjectId | ObjectId],
 ) -> int:
 
     result = await db["links"].delete_many(
@@ -56,29 +56,6 @@ def to_link(doc: dict) -> LinkPublic:
         item_b_type=doc["item_b_type"],
         created_at=doc["created_at"],
     )
-
-
-########################################################
-
-
-# Helper - check that an item exists and belongs to the user
-
-async def validate_item(
-    user_id: str,
-    item_type: TypesEnum,
-    item_id: PyObjectId,
-):
-    collection = db[ITEM_COLLECTIONS[item_type]]
-
-    result = await collection.find_one({
-        "_id": ObjectId(item_id),
-        "user_id": ObjectId(user_id),
-    })
-
-    if result is None:
-        raise HTTPException(status_code=404, detail="Item not found")
-
-    return result
 
 
 ########################################################

@@ -153,9 +153,15 @@ function Library() {
         })
     }
 
-    // Refresh data after bulk deletion
-    const handleDeleted = async () => {
-        setSelected(new Set())
+    // Clear confirmed batches while keeping the interrupted batch available for retry.
+    const handleDeleteSettled = async completedItems => {
+        if (completedItems.length) {
+            setSelected(prev => {
+                const next = new Set(prev)
+                completedItems.forEach(({ type, id }) => next.delete(`${type}:${id}`))
+                return next
+            })
+        }
 
         await Promise.all([
             queryClient.invalidateQueries({
@@ -203,7 +209,7 @@ function Library() {
                             size="sm"
                             itemsMode={itemsMode}
                             selected={loading || displayError ? [] : selectedItems}
-                            onDeleted={handleDeleted}
+                            onDeleteSettled={handleDeleteSettled}
                         />
 
                         <ItemTypesButton

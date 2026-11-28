@@ -1,40 +1,38 @@
-import { useState } from "react"
+import { useMutation } from "@tanstack/react-query"
 import { toast } from "@/components/ui/toast"
+import { bulkDeleteItems } from "@/api/bulkApi"
 import { deleteItem } from "@/api/deleteItem"
 
-export const useBulkDelete = () => {
-    const [isDeleting, setIsDeleting] = useState(false)
+async function bulkDeleteTags(items) {
+    const results = await Promise.allSettled(items.map(deleteItem))
+    const deleted = results.filter(result => result.status === "fulfilled").length
+    return { deleted, failed: results.length - deleted }
+}
 
-    const bulkDelete = async (selectedItems = []) => {
-        if (isDeleting || selectedItems.length === 0) return
-
-        setIsDeleting(true)
-
-        try {
-            const results = await Promise.allSettled(
-                selectedItems.map(item =>
-                    deleteItem({ type: item.type, id: item.id })
-                )
-            )
-
-            const successful = results.filter(
-                result => result.status === "fulfilled"
-            ).length
-
-            const failed = results.length - successful
-
-            toast.add({
-                title: "Bulk deletion completed",
-                description: `Deleted: ${successful}, Failed: ${failed}`,
-                type: failed > 0 ? "error" : "success",
-            })
-
-            return { successful, failed, results }
-
-        } finally {
-            setIsDeleting(false)
-        }
-    }
-
-    return { bulkDelete, isDeleting }
+export function useBulkDelete(onDeleteSettled) {
+    return useMutation({
+        mutationFn: ({ items }) => items[0]?.type === "tag"
+            ? bulkDeleteTags(items)
+            : bulkDeleteItems({ items }),
+        retry: false,
+        onSuccess: ({ deleted, skipped, failed }) => toast.add({
+            title: "Bulk deletion completed",
+            description: failed === undefined
+                ? `${deleted} deleted, ${skipped} skipped.`
+                : `Deleted: ${deleted}, Failed: ${failed}`,
+            type: failed > 0 ? "error" : "success",
+        }),
+        onError: error => toast.add({
+            title: "Bulk deletion failed",
+            description: error.deleted
+                ? `${error.message} Confirmed deletions: ${error.deleted}.`
+                : error.message,
+            type: "error",
+        }),
+        onSettled: (_result, error, { items }) => {
+            // A failed batch may have applied changes. Refresh even when it stays selected for retry.
+            const completed = error ? (error.completed ?? 0) : items.length
+            return onDeleteSettled?.(items.slice(0, completed))
+        },
+    })
 }

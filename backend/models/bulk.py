@@ -37,3 +37,8 @@ class BulkUpdateResult(BaseModel):
 # Response for bulk link removal
 class BulkUnlinkResult(BaseModel):
     deleted: int
+
+
+class BulkDeleteResult(BaseModel):
+    deleted: int
+    skipped: int

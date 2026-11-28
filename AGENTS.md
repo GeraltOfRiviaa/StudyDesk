@@ -127,3 +127,62 @@ For a frontend bulk action, start at `BulkActionsButton.jsx`:
 Adapt this approach to the actual task. For backend-only changes, start at the relevant endpoint or calling function. For refactoring tasks, explain how the affected execution flow works after the changes.
 
 Always base the walkthrough on the actual implemented code, not the original plan or assumptions.
+
+## Database Schema
+
+Before implementing or modifying database-related functionality, consult:
+
+- `docs/database-schema.md` — Database collections, fields, relationships and implementation guidelines.
+- `docs/database-schema.png` — Original visual database design.
+
+The schema describes both implemented and planned functionality. Always inspect the current backend models and collection mappings before making changes.
+
+Preserve the documented relationships, ownership rules and deletion dependencies. If implementation requires a deviation from the database design, explain why before introducing it.
+
+Keep the database documentation synchronized with intentional schema changes.
+
+## Code Comments and Programmer Notes
+
+The developer wants to understand, maintain and extend the implemented code independently. Therefore, add explanatory programmer comments to complicated or non-obvious logic.
+
+### When to add comments
+
+Add comments when implementing or modifying:
+
+- Complex conditions and validation logic.
+- MongoDB queries, aggregation pipelines and operators.
+- Data transformations and grouping operations.
+- React hooks and complicated state management.
+- Asynchronous operations and execution order.
+- Authentication and ownership checks.
+- Pagination, cursor generation and filtering.
+- Cache management and invalidation.
+- Error handling and partial failure recovery.
+- Workarounds, edge cases and intentional architectural decisions.
+
+### How to write comments
+
+- Write comments in English.
+- Keep them short, simple and precise.
+- Place comments directly above the relevant line or block of code.
+- Explain what complicated logic does and why it is necessary.
+- Explain unfamiliar operators, methods or patterns when their purpose is not immediately obvious.
+- Break larger functions into logical sections using short comments where appropriate.
+- Assume the developer understands basic programming but may not be familiar with advanced language features, library methods or architectural patterns.
+
+### What to avoid
+
+- Commenting every line of code.
+- Explaining obvious assignments, imports or basic syntax.
+- Repeating exactly what the code already says.
+- Writing unnecessarily long explanations inside source files.
+- Leaving outdated or misleading comments after refactoring.
+- Changing unrelated code solely to add comments.
+
+### General rule
+
+If a section of code would likely require an explanation during the implementation walkthrough, consider adding a short programmer comment directly to that section.
+
+Apply these guidelines to both frontend and backend code. When refactoring existing functions, improve their comments where necessary and preserve useful existing programmer notes.
+
+The goal is to make the code understandable without requiring the developer to repeatedly consult external documentation or ask for explanations.

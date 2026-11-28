@@ -10,6 +10,7 @@ async function postBatches(path, items, tags) {
     let completed = 0
     let matched = 0
     let deleted = 0
+    let skipped = 0
 
     for (let start = 0; start < items.length; start += MAX_BULK_ITEMS) {
         const batch = items.slice(start, start + MAX_BULK_ITEMS)
@@ -19,20 +20,24 @@ async function postBatches(path, items, tags) {
             const result = await api(path, { method: "POST", json })
             matched += result.matched ?? 0
             deleted += result.deleted ?? 0
+            skipped += result.skipped ?? 0
             completed += batch.length
         } catch (cause) {
             const body = cause instanceof Response
                 ? await cause.json().catch(() => null)
                 : null
-            const message = typeof body?.detail === "string"
-                ? body.detail
-                : "Try again later."
+            const detail = body?.detail
+            const message = typeof detail === "string" ? detail : detail?.message
 
-            throw Object.assign(new Error(message, { cause }), { completed })
+            // A partial response can confirm deletions inside the batch being retried.
+            throw Object.assign(new Error(message ?? "Try again later.", { cause }), {
+                completed,
+                deleted: deleted + (detail?.deleted ?? 0),
+            })
         }
     }
 
-    return { matched, deleted }
+    return { matched, deleted, skipped }
 }
 
 export async function bulkSetTags({ items, tags }) {
@@ -49,4 +54,8 @@ export function bulkUnlinkTags({ items }) {
 
 export function bulkRemoveLinks({ items }) {
     return postBatches("/bulk/links/remove", items)
+}
+
+export function bulkDeleteItems({ items }) {
+    return postBatches("/bulk/delete", items)
 }

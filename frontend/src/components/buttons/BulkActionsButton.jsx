@@ -22,14 +22,14 @@ import { useBulkRemoveLinks } from "@/hooks/useBulkRemoveLinks"
 import { useBulkSetTags } from "@/hooks/useBulkSetTags"
 import { useBulkUnlinkTags } from "@/hooks/useBulkUnlinkTags"
 
-export function BulkActionsButton({ size, selected, itemsMode, onDeleted }) {
+export function BulkActionsButton({ size, selected, itemsMode, onDeleteSettled }) {
     const [action, setAction] = useState(null)
     const submitting = useRef(false)
-    const { bulkDelete, isDeleting } = useBulkDelete()
+    const bulkDelete = useBulkDelete(onDeleteSettled)
     const setTags = useBulkSetTags()
     const unlinkTags = useBulkUnlinkTags()
     const removeLinks = useBulkRemoveLinks()
-    const isPending = isDeleting || setTags.isPending || unlinkTags.isPending || removeLinks.isPending
+    const isPending = bulkDelete.isPending || setTags.isPending || unlinkTags.isPending || removeLinks.isPending
 
     const itemActionsDisabled = !itemsMode || !selected.length || isPending
 
@@ -47,10 +47,7 @@ export function BulkActionsButton({ size, selected, itemsMode, onDeleted }) {
         delete: {
             title: "Delete",
             description: count => `Permanently delete ${count}?`,
-            submit: async ({ items }) => {
-                const results = await bulkDelete(items)
-                await onDeleted?.(results)
-            },
+            submit: bulkDelete.mutateAsync,
         },
     }
 
@@ -76,7 +73,6 @@ export function BulkActionsButton({ size, selected, itemsMode, onDeleted }) {
                 // Retry only the items outside the completed batches.
                 setAction({ ...action, items: action.items.slice(error.completed) })
             }
-            if (action.kind === "delete") console.error("Bulk deletion failed:", error)
         } finally {
             submitting.current = false
         }
