@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import Markdown from "react-markdown";
 import { useState, useEffect, useRef } from "react";
 import { useItemModal } from "@/context/ItemsModalContext";
+import { useModalWork } from "@/hooks/useModalWork";
 import { syncItemLinks } from "@/api/linkApi";
 import { deleteWithToast } from "@/utils/deleteWithToast";
 import { useTagLookup } from "@/hooks/useTagLookup";
@@ -21,14 +22,14 @@ import { useTagLookup } from "@/hooks/useTagLookup";
 export function UpdateNote({
     note,
     onUpdated,
-    onClose,
-    onDeleted
+    onClose
 }) {
     const [viewMode, setViewMode] = useState(true);
     const [linksLoading, setLinksLoading] = useState(true);
     const [linksError, setLinksError] = useState(null);
     const allowNavigation = useRef(false);
     const { registerNavigationGuard } = useItemModal();
+    const { signal, write } = useModalWork();
 
     // Use the fields from when this note opened to initialize the form once its links arrive.
     const [defaultValues] = useState(() => ({
@@ -57,61 +58,52 @@ export function UpdateNote({
     // The notes endpoint does not include links; fetch them separately.
     useEffect(() => {
         const controller = new AbortController();
+        const readSignal = AbortSignal.any([controller.signal, signal]);
 
-        api(`/links/note/${note.id}`, { signal: controller.signal })
+        api(`/links/note/${note.id}`, { signal: readSignal })
             .then(links => {
-                if (controller.signal.aborted) return;
+                if (readSignal.aborted) return;
                 reset({ ...defaultValues, links });
                 setLinksLoading(false);
             })
             .catch(error => {
-                if (controller.signal.aborted) return;
+                if (readSignal.aborted) return;
                 console.error("Could not load note links", error);
                 setLinksError("Could not load links. Try reopening the note.");
                 setLinksLoading(false);
             });
 
         return () => controller.abort();
-    }, [note.id, defaultValues, reset]);
+    }, [note.id, defaultValues, reset, signal]);
 
     async function onSubmit(data) {
         if (linksLoading || linksError) return;
 
         let updatedNote;
+        const links = form.getValues("links") ?? [];
         try {
-            updatedNote = await api(`/notes/${note.id}`, {
-                method: "PATCH",
-                json: {
-                    title: data.title,
-                    content: data.content,
-                    tags: data.tags,
-                },
+            await write(async sessionSignal => {
+                updatedNote = await api(`/notes/${note.id}`, {
+                    method: "PATCH",
+                    json: { title: data.title, content: data.content, tags: data.tags },
+                    signal: sessionSignal,
+                });
+                signal.throwIfAborted();
+                await syncItemLinks("note", note.id, links, { signal, writeSignal: sessionSignal });
             });
         } catch (error) {
-            console.error("Could not update note", error);
+            if (signal.aborted) return;
+            console.error("Could not fully update note", error);
+            if (updatedNote) onUpdated?.(updatedNote);
             toast.add({
-                title: "Could not update note",
-                description: "Try again later",
+                title: updatedNote ? "Note text saved, but links could not be fully saved" : "Could not confirm note update",
+                description: updatedNote ? "Try saving the links again." : "Check the Library before retrying.",
                 type: "error",
             });
             return;
         }
 
-        try {
-            // Read the controlled field directly so it also works before
-            // links is added to the Zod schema (which may strip unknown fields).
-            await syncItemLinks("note", note.id, form.getValues("links") ?? []);
-        } catch (error) {
-            console.error("Could not save note links", error);
-            onUpdated?.(updatedNote);
-            toast.add({
-                title: "Note text saved, but links could not be fully saved",
-                description: "Try saving the links again.",
-                type: "error",
-            });
-            return;
-        }
-
+        if (signal.aborted) return;
         toast.add({ title: "Note updated", type: "success" });
         allowNavigation.current = true;
         onUpdated?.(updatedNote);
@@ -119,9 +111,12 @@ export function UpdateNote({
     }
 
     const handleDelete = async () => {
-        await deleteWithToast("note", note.id)
-        onDeleted?.()
-        onClose?.()
+        try {
+            await write(sessionSignal => deleteWithToast("note", note.id, { signal: sessionSignal, modalSignal: signal }));
+            if (!signal.aborted) onClose?.();
+        } catch {
+            // The active modal already received feedback from deleteWithToast.
+        }
     }
 
     return (

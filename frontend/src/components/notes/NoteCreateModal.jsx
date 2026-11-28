@@ -11,12 +11,11 @@ import { ItemModalFooter } from "@/components/items/shared/ItemModalFooter";
 import { ItemRelationsFields } from "@/components/items/shared/ItemRelationsFields";
 import { FieldGroup } from "@/components/ui/field";
 import { syncItemLinks } from "@/api/linkApi";
+import { useModalWork } from "@/hooks/useModalWork";
 
 // CREATE NOTE MODAL
-export function NoteCreateModal({
-    onClose,
-    onCreated
-}) {
+export function NoteCreateModal({ onClose }) {
+    const { signal, write } = useModalWork();
     const form = useForm({
         resolver: zodResolver(CreateNoteSchema),
         defaultValues: {
@@ -27,43 +26,35 @@ export function NoteCreateModal({
         },
     });
     async function onSubmit(data) {
-        let createdNote;
+        let created = false;
+        const links = form.getValues("links") ?? [];
         try {
-            createdNote = await api("/notes/", {
-                method: "POST",
-                json: {
-                    title: data.title,
-                    content: data.content,
-                    tags: data.tags,
-                },
+            await write(async sessionSignal => {
+                const note = await api("/notes/", {
+                    method: "POST",
+                    json: { title: data.title, content: data.content, tags: data.tags },
+                    signal: sessionSignal,
+                });
+                created = true;
+                // The note write may outlive this modal. Link writes need its live scope.
+                signal.throwIfAborted();
+                await syncItemLinks("note", note.inserted_id, links, { signal, writeSignal: sessionSignal });
             });
-            
-        } catch (error) {
-            console.error("Could not create note", error);
-            toast.add({
-                title: "Could not create note",
-                description: "Try again later",
-                type: "error",
-            });
-            return;
-        }
-
-        // POST /notes/ returns inserted_id, not a complete NotePublic object.
-        try {
-            await syncItemLinks("note", createdNote.inserted_id, form.getValues("links") ?? []);
+            if (signal.aborted) return;
             toast.add({ title: "Note created", type: "success" });
         } catch (error) {
-            console.error("Note created but its links could not all be saved", error);
+            if (signal.aborted) return;
+            console.error("Could not fully save note", error);
             toast.add({
-                title: "Note created, but some links could not be saved",
-                description: "Open the note and try adding them again.",
+                title: created ? "Note created, but some links could not be saved" : "Could not confirm note creation",
+                description: created ? "Open the note and try adding the links again." : "Check the Library before retrying.",
                 type: "error",
             });
+            if (!created) return;
         }
 
         // Do not retry note creation if a later link request fails.
         form.reset();
-        onCreated?.()
         onClose?.()
     }
 

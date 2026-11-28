@@ -9,6 +9,7 @@ import { toast } from "@/components/ui/toast"
 import { ChangePasswordSchema } from "@/schemas"
 import { api } from "@/api/client"
 import { authRateLimitMessage } from "@/api/accountApi"
+import { useUser } from "@/context/AuthContext"
 
 const FIELDS = [
     { name: "oldPassword", label: "Current password", autoComplete: "current-password" },
@@ -18,6 +19,7 @@ const FIELDS = [
 
 function ChangePassword() {
     const navigate = useNavigate()
+    const { session } = useUser()
     const [showPassword, setShowPassword] = useState(false)
 
 
@@ -27,14 +29,18 @@ function ChangePassword() {
     })
 
     async function onSubmit(data) {
+        if (session.signal.aborted) return
         try {
             await api("/auth/user/password", {
                 method: "PATCH",
                 json: { old_password: data.oldPassword, new_password: data.newPassword },
+                signal: session.signal,
             })
+            if (session.signal.aborted) return
             toast.add({ title: "Password changed", type: "success" })
             navigate("/settings")
         } catch (err) {
+            if (session.signal.aborted) return
             toast.add({
                 title: "Could not change the password",
                 description: authRateLimitMessage(err) ?? (err.status === 400 ? "Current password is incorrect" : "Try again later"),

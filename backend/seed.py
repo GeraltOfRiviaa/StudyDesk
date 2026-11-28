@@ -67,6 +67,22 @@ SUBJECTS = {
         ('Project Testing', 'Check normal usage, empty states and invalid input.')]),
 }
 
+# A search for "Study" spans more than one 30-tag page.
+STUDY_TAGS = (
+    'Study Active Recall', 'Study Brainstorming', 'Study Checklists',
+    'Study Concept Maps', 'Study Cornell Notes', 'Study Definitions',
+    'Study Diagrams', 'Study Discussion', 'Study Essays', 'Study Examples',
+    'Study Exams', 'Study Flashcards', 'Study Formulas', 'Study Group Review',
+    'Study Key Terms', 'Study Lab Notes', 'Study Lecture Notes',
+    'Study Long Answers', 'Study Mistake Log', 'Study Mock Tests',
+    'Study Objectives', 'Study Outlines', 'Study Practice Problems',
+    'Study Projects', 'Study Quick Review', 'Study Reading',
+    'Study Research', 'Study Revision Plan', 'Study Short Answers',
+    'Study Spaced Repetition', 'Study Summaries', 'Study Timed Practice',
+    'Study Weekly Review', 'Study Worked Examples', 'Study Writing',
+)
+REVIEW_NOTE_COUNT = 24
+
 rng = random.Random(42)
 
 
@@ -95,9 +111,12 @@ async def seed_user(db, hash_password, now, create=True):
 
 async def seed_tags(db, uid, now):
     from models.tag import TagCreate
+    colors = [color for color, _ in SUBJECTS.values()]
+    palette = {name: color for name, (color, _) in SUBJECTS.items()}
+    palette.update({name: colors[index % len(colors)] for index, name in enumerate(STUDY_TAGS)})
     docs = [{'_id': ObjectId(), 'user_id': uid, **TagCreate(name=name, color=color).model_dump(),
              **timestamps(now)}
-            for name, (color, _) in SUBJECTS.items()]
+            for name, color in palette.items()]
     await db.tags.insert_many(docs)
     return {doc['name']: doc['_id'] for doc in docs}
 
@@ -105,20 +124,29 @@ async def seed_tags(db, uid, now):
 async def seed_notes(db, uid, tags, now):
     from models.note import NoteCreate
     docs = []
+
+    def add_note(title, summary, names):
+        content = f'# {title}\n\n{summary}\n\n## Revision checklist\n\n- [x] Read the summary\n- [ ] Explain it in my own words\n- [ ] Try a practical example\n\n**Study tip:** Review this topic before the next lesson.'
+        note = NoteCreate(title=title, content=content, tags=[str(tags[name]) for name in names])
+        docs.append({'_id': ObjectId(), 'user_id': uid, 'title': note.title,
+                     'content': note.content, 'tags': [ObjectId(t) for t in note.tags],
+                     **timestamps(now)})
+
     for subject, (_, topics) in SUBJECTS.items():
         for index, (title, summary) in enumerate(topics):
             names = [subject]
             if index == 1 and subject != 'Exam Prep':
                 names.append('Exam Prep')
             if index == 2:
-                names += rng.sample([name for name in tags if name != subject], 2)
+                names += rng.sample([name for name in SUBJECTS if name != subject], 2)
             if index == 3 and subject in ('Git', 'Mathematics'):
                 names = []  # Exercise the untagged filter.
-            content = f'# {title}\n\n{summary}\n\n## Revision checklist\n\n- [x] Read the summary\n- [ ] Explain it in my own words\n- [ ] Try a practical example\n\n**Study tip:** Review this topic before the next lesson.'
-            note = NoteCreate(title=title, content=content, tags=[str(tags[name]) for name in names])
-            docs.append({'_id': ObjectId(), 'user_id': uid, 'title': note.title,
-                         'content': note.content, 'tags': [ObjectId(t) for t in note.tags],
-                         **timestamps(now)})
+            add_note(title, summary, names)
+
+    # Keep the original subject notes first for the existing link fixtures.
+    topics = [(subject, title, summary) for subject, (_, entries) in SUBJECTS.items() for title, summary in entries]
+    for index, ((subject, title, summary), tag) in enumerate(zip(topics, STUDY_TAGS[-REVIEW_NOTE_COUNT:]), start=1):
+        add_note(f'Study review {index:02d}: {title}', summary, [subject, tag])
     await db.notes.insert_many(docs)
     return docs
 
@@ -128,7 +156,7 @@ async def seed_links(db, uid, notes, now):
     from models.types import TypesEnum
     docs = []
     # Link adjacent topics within each subject: three links per subject.
-    for start in range(0, len(notes), 4):
+    for start in range(0, 4 * len(SUBJECTS), 4):
         for index in range(start, start + 3):
             a, b = sorted((notes[index]['_id'], notes[index + 1]['_id']), key=str)
             link = LinkBase(item_a_id=str(a), item_b_id=str(b),

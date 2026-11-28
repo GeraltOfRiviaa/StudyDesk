@@ -117,6 +117,14 @@ Use each `next_cursor` with the same effective filters, sort, and direction. A c
 
 Cursor ordering is stable while the data is unchanged. Editing an item's sort value between requests can move it across a page boundary. Run the backend suite against disposable MongoDB and `node --test tests/libraryPagination.test.js` from `frontend` to rerun the pagination regressions.
 
+### Frontend reliability checks
+
+The note and Library tag pickers search all pages. Filters apply as selections change. An inline tag is saved independently of the note, so closing the note leaves the tag available.
+
+A temporary session check failure offers Retry when the account is unknown. An already verified account keeps its current view during a temporary failure. The server authorizes requests independently. Session teardown is local to the tab that observes it. A write already sent may finish on the server after its modal closes or the browser cancels it.
+
+Run `node --test tests/*.test.js` from `frontend`. Set `STUDYDESK_TEST_CHROME` to an installed Chromium executable to include the browser regression. It uses a temporary profile and a local mock API.
+
 ### Logs (in a second terminal)
 ```
 docker compose -f docker-compose.dev.yml logs -f api

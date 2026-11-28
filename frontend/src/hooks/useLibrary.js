@@ -16,15 +16,15 @@ export function useLibrarySequence(viewKey) {
 }
 
 export function useLibrary(filters, enabled, sequenceId) {
-    const { user } = useUser()
+    const { session } = useUser()
 
-    return useLibraryPages(["library", user?.id, filters, sequenceId], fetchLibrary, filters, enabled && !!user?.id)
+    return useLibraryPages(["library", session?.userId, filters, sequenceId], fetchLibrary, filters, enabled, session)
 }
 
 export function useLibraryTags(filters, enabled, sequenceId) {
-    const { user } = useUser()
+    const { session } = useUser()
 
-    return useLibraryPages(["tags", user?.id, "library", filters, sequenceId], fetchLibraryTags, filters, enabled && !!user?.id)
+    return useLibraryPages(["tags", session?.userId, "library", filters, sequenceId], fetchLibraryTags, filters, enabled, session)
 }
 
 function getNextCursor(lastPage, pageParams) {
@@ -66,9 +66,13 @@ export function hasUnusableContinuation(query) {
         (!!query.data?.pages.at(-1)?.has_more && !query.hasNextPage)
 }
 
-function useLibraryPages(queryKey, fetchPage, filters, enabled) {
+function useLibraryPages(queryKey, fetchPage, filters, enabled, session) {
     const queryClient = useQueryClient()
-    const query = useInfiniteQuery(libraryPageOptions(queryKey, fetchPage, filters, enabled))
+    const fetchForSession = ({ signal, ...params }) => {
+        session.signal.throwIfAborted()
+        return fetchPage({ ...params, signal: AbortSignal.any([signal, session.signal]) })
+    }
+    const query = useInfiniteQuery(libraryPageOptions(queryKey, fetchForSession, filters, enabled && !!session))
 
     const { data } = query
     const items = useMemo(() => {
@@ -86,6 +90,7 @@ function useLibraryPages(queryKey, fetchPage, filters, enabled) {
     const nextCursor = !hasInvalidCursor && query.hasNextPage ? data.pages.at(-1).next_cursor : null
 
     const fetchNextPage = () => {
+        if (session?.signal.aborted) return false
         // A refresh can change the cursor before React updates this view.
         const state = queryClient.getQueryState(queryKey)
         const latest = state?.data

@@ -17,7 +17,7 @@ export function bulkErrorDescription(error, targetCount, countField, label) {
     return `${error.message} ${completed} of ${targetCount} targets completed. ${confirmed ?? 0} ${countLabel} confirmed.`
 }
 
-async function postBatches(path, items, tags) {
+async function postBatches(path, items, tags, signal) {
     if (!items.length) throw new Error("Select at least one item.")
 
     const completedItems = []
@@ -27,11 +27,13 @@ async function postBatches(path, items, tags) {
     let skipped = 0
 
     for (let start = 0; start < items.length; start += MAX_BULK_ITEMS) {
+        // Never send the next batch after its originating session has ended.
+        signal?.throwIfAborted()
         const batch = items.slice(start, start + MAX_BULK_ITEMS)
         const json = tags ? { items: batch, tags } : { items: batch }
 
         try {
-            const result = await api(path, { method: "POST", json })
+            const result = await api(path, { method: "POST", json, signal })
             matched += result.matched ?? 0
             modified += result.modified ?? 0
             deleted += result.deleted ?? 0
@@ -62,28 +64,29 @@ async function postBatches(path, items, tags) {
     return { matched, modified, deleted, skipped }
 }
 
-export async function bulkSetTags({ items, tags }) {
+export async function bulkSetTags({ items, tags, signal }) {
     if (!tags.length || tags.length > MAX_BULK_TAGS) {
         throw new Error(`Select between 1 and ${MAX_BULK_TAGS} tags.`)
     }
 
-    return postBatches("/bulk/tags/add", items, tags)
+    return postBatches("/bulk/tags/add", items, tags, signal)
 }
 
-export function bulkUnlinkTags({ items }) {
-    return postBatches("/bulk/tags/remove", items)
+export function bulkUnlinkTags({ items, signal }) {
+    return postBatches("/bulk/tags/remove", items, undefined, signal)
 }
 
-export function bulkRemoveLinks({ items }) {
-    return postBatches("/bulk/links/remove", items)
+export function bulkRemoveLinks({ items, signal }) {
+    return postBatches("/bulk/links/remove", items, undefined, signal)
 }
 
-export function bulkDeleteItems({ items }) {
-    return postBatches("/bulk/delete", items)
+export function bulkDeleteItems({ items, signal }) {
+    return postBatches("/bulk/delete", items, undefined, signal)
 }
 
-export async function bulkDeleteTags(items) {
-    const results = await Promise.allSettled(items.map(deleteItem))
+export async function bulkDeleteTags(items, { signal } = {}) {
+    signal?.throwIfAborted()
+    const results = await Promise.allSettled(items.map(item => deleteItem(item, { signal })))
     const completedItems = []
     let deleted = 0
     let skipped = 0

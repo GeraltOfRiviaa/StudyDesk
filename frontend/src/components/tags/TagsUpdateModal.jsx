@@ -8,11 +8,13 @@ import { toast } from "@/components/ui/toast";
 import { TagFields } from "@/components/tags/TagsFields"
 import { useState } from "react";
 import { deleteWithToast } from "@/utils/deleteWithToast";
+import { useModalWork } from "@/hooks/useModalWork";
 
 
 // UPDATE TAG FORM
 // Rendered inside TagRow's DialogContent. `tag` is the detail response (with usage).
-export function UpdateTag({ tag, onUpdated, onClose, onChanged }) {
+export function UpdateTag({ tag, onUpdated, onClose }) {
+    const { signal, write } = useModalWork();
     const [confirmingDelete, setConfirmingDelete] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState(null);
@@ -23,15 +25,18 @@ export function UpdateTag({ tag, onUpdated, onClose, onChanged }) {
 
     async function onSubmit(data) {
         try {
-            const updatedTag = await api(`/tags/${tag.id}`, {
+            const updatedTag = await write(sessionSignal => api(`/tags/${tag.id}`, {
                 method: "PATCH",
                 json: { name: data.name, color: data.color },
-            });
+                signal: sessionSignal,
+            }));
+            if (signal.aborted) return;
 
             toast.add({ title: "Tag updated", type: "success" });
-            onUpdated?.(updatedTag);
+            onUpdated?.({ ...tag, ...updatedTag });
             onClose?.();
         } catch {
+            if (signal.aborted) return;
             toast.add({
                 title: "Could not update tag",
                 description: "Try again later",
@@ -45,28 +50,28 @@ export function UpdateTag({ tag, onUpdated, onClose, onChanged }) {
         setIsDeleting(true);
         setDeleteError(null);
         try {
-            await deleteWithToast("tag", tag.id);
-            onChanged?.();
-            onClose?.();
+            await write(sessionSignal => deleteWithToast("tag", tag.id, { signal: sessionSignal, modalSignal: signal }));
+            if (!signal.aborted) onClose?.();
         } catch (error) {
+            if (signal.aborted) return;
             if (error.status === 404) {
-                onChanged?.();
                 onClose?.();
             } else if (error.status === 503) {
                 const detail = (await error.json().catch(() => null))?.detail;
+                if (signal.aborted) return;
                 setDeleteError(detail?.message ?? "Could not confirm tag deletion. Try again.");
                 // Cleanup may have changed usage even when the tag still exists.
                 try {
-                    onUpdated?.(await api(`/tags/${tag.id}`));
+                    const updated = await api(`/tags/${tag.id}`, { signal });
+                    if (!signal.aborted) onUpdated?.(updated);
                 } catch (refreshError) {
-                    onChanged?.();
-                    if (refreshError.status === 404) onClose?.();
+                    if (!signal.aborted && refreshError.status === 404) onClose?.();
                 }
             } else {
                 setDeleteError("Could not delete this tag. Try again.");
             }
         } finally {
-            setIsDeleting(false);
+            if (!signal.aborted) setIsDeleting(false);
         }
     }
 

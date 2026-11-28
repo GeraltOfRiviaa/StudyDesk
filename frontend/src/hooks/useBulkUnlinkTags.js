@@ -1,10 +1,11 @@
 import { bulkUnlinkTags } from "@/api/bulkApi"
 import { useBulkMutation } from "@/hooks/useBulkMutation"
+import { bulkTagFeedback } from "@/lib/bulkFeedback"
 
 export function useBulkUnlinkTags() {
     return useBulkMutation({
         mutationFn: bulkUnlinkTags,
-        successMessage: ({ matched }) => `Tags cleared from ${matched} selected ${matched === 1 ? "item" : "items"}`,
+        feedback: result => bulkTagFeedback(result, "cleared"),
         errorTitle: "Could not clear tags",
         changesTags: true,
     })

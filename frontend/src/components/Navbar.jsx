@@ -9,19 +9,21 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom"
-import { useEffect, useState } from "react"
 import { useUser } from "@/context/AuthContext"
 import { Spinner } from "./ui/spinner";
-import { api } from '@/api/client'
+import { toast } from "@/components/ui/toast"
 import {ModeToggle} from '@/components/ThemeToggle'
 
 
 function Navbar() {
-    const { setUser } = useUser()
-    const { user, loading } = useUser()
-    const navigate = useNavigate()
-    const { logout } = useUser()
+    const { user, loading, session, logout } = useUser()
+    async function handleLogout() {
+        try {
+            await logout(session)
+        } catch {
+            if (!session.signal.aborted) toast.add({ title: "Could not confirm logout. Try again.", type: "error" })
+        }
+    }
 
     const user_username = user?.username ?? ""
     
@@ -54,7 +56,7 @@ function Navbar() {
                             <DropdownMenuItem render={<Link to="/settings" />}>
                                 Settings
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive" onClick={logout}>
+                            <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
                                 Logout
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
@@ -96,7 +98,7 @@ function Navbar() {
                     <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="rounded-full shrink-0" type="button"><AvatarWithBadge username={user_username}></AvatarWithBadge></Button>} />
                     <DropdownMenuContent className="w-32">
                         <DropdownMenuGroup>
-                            <DropdownMenuItem className="text-destructive" onClick={logout}>
+                            <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
                                 Logout
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
