@@ -4,11 +4,8 @@ import { ItemTypesButton } from "@/components/buttons/ItemTypesButton"
 import { Switch } from "@/components/ui/switch"
 import { FilterButton } from "@/components/buttons/FilterButton"
 import { AddItemButton } from "@/components/buttons/AddItemsButton"
-import { Spinner } from "@/components/ui/spinner"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Button } from "@/components/ui/button"
-import { LibraryRow } from "@/components/library/LibraryRow"
-import { TagRow } from "@/components/tags/TagRows"
+import { LibraryResults } from "@/components/library/LibraryResults"
 
 import { useEffect, useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
@@ -30,9 +27,24 @@ const itemCreateOptions = Object.values(ITEM_TYPES).map(({ type, label }) => ({
 
 const tagCreateOptions = [{ type: "tag", label: "Tag" }]
 
+const getRowKey = ({ type = "tag", id }) => `${type}:${id}`
+
+function emptySelection(viewKey) {
+    return { viewKey, keys: new Set(), autoSelect: false, lastRows: null, lastLoadedKeys: new Set() }
+}
+
+function hasRestrictiveFilters(filters, itemsMode) {
+    if (!itemsMode) return !!filters.q.trim()
+
+    // The API treats an empty list, "all", and all four collections as the same scope.
+    const restrictsType = filters.collections.length > 0 && !filters.collections.includes("all")
+        && Object.values(ITEM_TYPES).some(({ collection }) => !filters.collections.includes(collection))
+    return !!filters.q || restrictsType || filters.match === "none" || filters.tags.length > 0
+}
+
 function Library() {
-    const [selected, setSelected] = useState(new Set())
     const [itemsMode, setItemsMode] = useState(true)
+    const [unavailableKeys, setUnavailableKeys] = useState(() => new Set())
 
     const { user } = useUser()
     const { itemsRevision, openItem } = useItemModal()
@@ -40,26 +52,21 @@ function Library() {
 
     // Read filters from URL
     const { filters, setFilter, resetFilters } = useLibraryFilters()
+    const viewKey = JSON.stringify([user?.id, itemsMode, filters])
+    const [selection, setSelection] = useState(() => emptySelection(viewKey))
+    const selected = selection.keys
 
     // Update the URL immediately, but debounce the API search
     const debouncedSearch = useDebounce(filters.q, 300)
     const isSearchPending = filters.q !== debouncedSearch
 
-    const handleFilterChange = (key, value) => {
-        setSelected(new Set())
-        setFilter(key, value)
-    }
-
-    const handleResetFilters = () => {
-        setSelected(new Set())
-        resetFilters({ preserveItemFilters: !itemsMode })
-    }
+    const handleResetFilters = () => resetFilters({ preserveItemFilters: !itemsMode })
 
     const itemsQuery = useLibrary({
         ...filters,
         q: debouncedSearch,
         tags: filters.match === "none" ? [] : filters.tags,
-    }, itemsMode)
+    }, itemsMode && !isSearchPending)
 
     const tagSort = ["title", "created_at", "updated_at"].includes(filters.sort)
         ? filters.sort
@@ -68,7 +75,7 @@ function Library() {
         q: debouncedSearch.trim(),
         sort: tagSort === "title" ? "name" : tagSort,
         order: filters.order,
-    }, !itemsMode)
+    }, !itemsMode && !isSearchPending)
 
     const pickerTagsQuery = useQuery({
         queryKey: ["tags", user?.id],
@@ -78,24 +85,26 @@ function Library() {
 
     const pickerTags = pickerTagsQuery.data ?? []
     const listedTagIds = new Set(pickerTags.map(tag => tag.id))
-    const missingItemTagIds = itemsMode && pickerTagsQuery.isSuccess
+    const missingItemTagIds = itemsMode && pickerTagsQuery.data !== undefined
         ? itemsQuery.items.flatMap(item => item.tags ?? [])
             .filter(id => !listedTagIds.has(id))
         : []
     const extraTags = useTagLookup(missingItemTagIds)
     const itemTags = [...pickerTags, ...extraTags]
 
-    const {
-        items: displayedItems,
-        isLoading,
-        error,
-        hasNextPage,
-        fetchNextPage,
-        isFetchingNextPage,
-        refetch,
-    } = itemsMode ? itemsQuery : libraryTagsQuery
-    const loading = isSearchPending || isLoading || (itemsMode && pickerTagsQuery.isLoading)
-    const displayError = error || (itemsMode && pickerTagsQuery.error)
+    const activeQuery = itemsMode ? itemsQuery : libraryTagsQuery
+    const pickerMissing = itemsMode && pickerTagsQuery.data === undefined
+    const pickerFailed = pickerMissing && pickerTagsQuery.isError
+    const listFailed = activeQuery.isError && activeQuery.items.length === 0
+    const initialError = !isSearchPending && (listFailed || pickerFailed)
+    const initialLoading = isSearchPending || (!initialError && (!activeQuery.hasData || pickerMissing))
+    const displayedItems = initialLoading || initialError ? [] :
+        activeQuery.items.filter(item => !unavailableKeys.has(getRowKey(item)))
+
+    const retryInitialLoad = () => {
+        if (listFailed) void activeQuery.refetch({ cancelRefetch: false })
+        if (pickerFailed) void pickerTagsQuery.refetch({ cancelRefetch: false })
+    }
 
     // Refresh cached data when an item changes
     useEffect(() => {
@@ -110,56 +119,59 @@ function Library() {
         })
     }, [itemsRevision, queryClient, user?.id])
 
-    // Toggle individual item selection
     const toggle = (type, id) => {
-        const key = `${type}:${id}`
+        const key = getRowKey({ type, id })
 
-        setSelected(prev => {
-            const next = new Set(prev)
-
-            next.has(key)
-                ? next.delete(key)
-                : next.add(key)
-
-            return next
+        setSelection(previous => {
+            const keys = new Set(previous.keys)
+            // Removing a row turns off automatic selection and keeps the rest selected.
+            if (keys.delete(key)) return { ...previous, keys, autoSelect: false }
+            keys.add(key)
+            return { ...previous, keys }
         })
     }
 
-    // Generate selection keys for currently displayed items
-    const displayedKeys = displayedItems.map(item =>
-        `${itemsMode ? item.type : "tag"}:${item.id}`
-    )
+    const displayedKeys = displayedItems.map(getRowKey)
+    const selectedKeys = displayedKeys.filter(key => selected.has(key))
 
-    const allSelected =
-        displayedKeys.length > 0 &&
-        displayedKeys.every(key => selected.has(key))
+    // The URL also changes through navigation, so clear selection before rendering a new view.
+    if (selection.viewKey !== viewKey) {
+        setSelection(emptySelection(viewKey))
+    } else if (!initialLoading && !initialError && activeQuery.isSuccess &&
+        activeQuery.fetchStatus === "idle" && selection.lastRows !== activeQuery.items) {
+        // Reconcile only successful results. The previous rows distinguish new arrivals from existing ones.
+        const keys = new Set(displayedKeys.filter(key => selected.has(key) ||
+            (selection.autoSelect && !selection.lastLoadedKeys.has(key))))
+        setSelection({ ...selection, keys, lastRows: activeQuery.items, lastLoadedKeys: new Set(displayedKeys) })
+    }
 
-    const someSelected =
-        displayedKeys.some(key => selected.has(key)) &&
-        !allSelected
+    const allSelected = displayedKeys.length > 0 && selectedKeys.length === displayedKeys.length
+    const someSelected = selectedKeys.length > 0 && !allSelected
 
-    // Select or deselect all currently loaded items
     const toggleAll = () => {
-        setSelected(prev => {
-            const next = new Set(prev)
-
-            displayedKeys.forEach(key => {
-                allSelected
-                    ? next.delete(key)
-                    : next.add(key)
-            })
-
-            return next
-        })
+        setSelection(previous => ({
+            ...previous,
+            keys: new Set(allSelected ? [] : displayedKeys),
+            autoSelect: !allSelected,
+            lastLoadedKeys: new Set(displayedKeys),
+        }))
     }
 
-    // Clear confirmed batches while keeping the interrupted batch available for retry.
-    const handleDeleteSettled = async completedItems => {
+    // Clear confirmed deletions here. The bulk dialog owns its separate retry snapshot.
+    const handleDeleteSettled = async (completedItems, unavailableItems) => {
         if (completedItems.length) {
-            setSelected(prev => {
-                const next = new Set(prev)
-                completedItems.forEach(({ type, id }) => next.delete(`${type}:${id}`))
-                return next
+            const completedKeys = new Set(completedItems.map(getRowKey))
+            setSelection(previous => ({
+                ...previous,
+                keys: new Set([...previous.keys].filter(key => !completedKeys.has(key))),
+            }))
+        }
+        if (unavailableItems.length) {
+            // A cached page can still show a deleted row even after the deletion request succeeds.
+            setUnavailableKeys(previous => {
+                const keys = new Set(previous)
+                unavailableItems.forEach(item => keys.add(getRowKey(item)))
+                return keys
             })
         }
 
@@ -173,17 +185,20 @@ function Library() {
         ])
     }
 
-    // Switch between items and tags
-    const handleLibrarySwitch = () => {
-        setSelected(new Set())
-        setItemsMode(prev => !prev)
-    }
-
     // Convert selection keys into objects for bulk actions
-    const selectedItems = displayedKeys.filter(key => selected.has(key)).map(key => {
+    const selectedItems = selectedKeys.map(key => {
         const [type, id] = key.split(":")
         return { type, id }
     })
+    const selectAll = (
+        <Checkbox
+            aria-label={itemsMode ? "Select all loaded items" : "Select all loaded tags"}
+            checked={allSelected}
+            indeterminate={someSelected}
+            disabled={displayedItems.length === 0}
+            onCheckedChange={toggleAll}
+        />
+    )
 
     return (
         <div
@@ -198,17 +213,17 @@ function Library() {
 
                 <Search
                     value={filters.q}
-                    onChange={value => handleFilterChange("q", value)}
+                    onChange={value => setFilter("q", value)}
                     placeholder={itemsMode ? "Search by title..." : "Search by name..."}
                     maxLength={150}
                 />
 
-                <div className="flex flex-row justify-between">
-                    <div className="flex flex-row gap-2 my-auto">
+                <div className="flex flex-wrap justify-between gap-2">
+                    <div className="my-auto flex flex-wrap gap-2">
                         <BulkActionsButton
                             size="sm"
                             itemsMode={itemsMode}
-                            selected={loading || displayError ? [] : selectedItems}
+                            selected={selectedItems}
                             onDeleteSettled={handleDeleteSettled}
                         />
 
@@ -216,7 +231,7 @@ function Library() {
                             size="sm"
                             disabled={!itemsMode}
                             value={filters.collections}
-                            onChange={value => handleFilterChange("collections", value)}
+                            onChange={value => setFilter("collections", value)}
                         />
                     </div>
 
@@ -228,10 +243,10 @@ function Library() {
                         match={filters.match}
                         sort={itemsMode ? filters.sort : tagSort}
                         order={filters.order}
-                        onTagsChange={value => handleFilterChange("tags", value)}
-                        onMatchChange={value => handleFilterChange("match", value)}
-                        onSortChange={value => handleFilterChange("sort", value)}
-                        onOrderChange={value => handleFilterChange("order", value)}
+                        onTagsChange={value => setFilter("tags", value)}
+                        onMatchChange={value => setFilter("match", value)}
+                        onSortChange={value => setFilter("sort", value)}
+                        onOrderChange={value => setFilter("order", value)}
                         onReset={handleResetFilters}
                     />
                 </div>
@@ -242,14 +257,9 @@ function Library() {
 
                 {/* Header */}
                 {itemsMode ? (
-                    <div className="grid grid-cols-[minmax(0,1fr)_7rem] md:grid-cols-[minmax(0,1fr)_11rem_7rem] lg:grid-cols-[minmax(0,1fr)_14rem_8rem_8rem] items-center gap-2 px-2 h-10 shrink-0 bg-card border-b">
+                    <div className="grid grid-cols-[minmax(0,1fr)_7rem] md:grid-cols-[minmax(0,1fr)_11rem_7rem] lg:grid-cols-[minmax(0,1fr)_14rem_8rem_8rem] items-center gap-2 px-2 h-10 shrink-0 bg-card border-b overflow-y-hidden [scrollbar-gutter:stable]">
                         <div className="flex min-w-0 items-center gap-2">
-                            <Checkbox
-                                checked={allSelected}
-                                indeterminate={someSelected}
-                                disabled={loading || !!displayError}
-                                onCheckedChange={toggleAll}
-                            />
+                            {selectAll}
                             <p className="text-lg">Title</p>
                         </div>
 
@@ -258,14 +268,9 @@ function Library() {
                         <p className="hidden lg:block">Updated at</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-[minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_7rem] md:grid-cols-[minmax(0,1fr)_8rem_8rem] items-center gap-2 px-2 h-10 shrink-0 bg-card border-b">
+                    <div className="grid grid-cols-[minmax(0,1fr)] sm:grid-cols-[minmax(0,1fr)_7rem] md:grid-cols-[minmax(0,1fr)_8rem_8rem] items-center gap-2 px-2 h-10 shrink-0 bg-card border-b overflow-y-hidden [scrollbar-gutter:stable]">
                         <div className="flex min-w-0 items-center gap-2">
-                            <Checkbox
-                                checked={allSelected}
-                                indeterminate={someSelected}
-                                disabled={loading || !!displayError}
-                                onCheckedChange={toggleAll}
-                            />
+                            {selectAll}
                             <p className="text-lg">Name</p>
                         </div>
 
@@ -274,84 +279,49 @@ function Library() {
                     </div>
                 )}
 
-                {/* Scrollable body */}
-                <div className="flex-1 min-h-0 overflow-y-auto">
-                    {loading ? (
-                        <div className="flex h-full items-center justify-center p-4">
-                            <Spinner />
-                        </div>
-                    ) : displayError ? (
-                        <div className="flex flex-col items-center gap-2 p-4">
-                            <p>Could not fetch Library data.</p>
-
-                            <Button
-                                variant="outline"
-                                onClick={() => {
-                                    refetch()
-                                    if (itemsMode) pickerTagsQuery.refetch()
-                                }}
-                            >
-                                Retry
-                            </Button>
-                        </div>
-                    ) : displayedItems.length === 0 ? (
-                        <div className="flex h-full flex-col items-center justify-center p-4 text-center">
-                            <p>{itemsMode ? "No items found." : "No tags found."}</p>
-                        </div>
-                    ) : itemsMode ? (
-                        displayedItems.map(item => (
-                            <LibraryRow
-                                key={`${item.type}:${item.id}`}
-                                item={item}
-                                tags={itemTags}
-                                selected={selected}
-                                onToggle={toggle}
-                            />
-                        ))
-                    ) : (
-                        displayedItems.map(tag => (
-                            <TagRow
-                                key={tag.id}
-                                tag={tag}
-                                selected={selected}
-                                onToggle={toggle}
-                            />
-                        ))
-                    )}
-
-                    {hasNextPage && !loading && !displayError && (
-                        <div className="flex justify-center p-4">
-                            <Button
-                                variant="outline"
-                                disabled={isFetchingNextPage}
-                                onClick={() => fetchNextPage()}
-                            >
-                                {isFetchingNextPage
-                                    ? "Loading..."
-                                    : "Load more"}
-                            </Button>
-                        </div>
-                    )}
-                </div>
+                {/* A new view gets its own scroll position and observer cursor history. */}
+                <LibraryResults
+                    key={viewKey}
+                    itemsMode={itemsMode}
+                    query={activeQuery}
+                    rows={displayedItems}
+                    itemTags={itemTags}
+                    selected={selected}
+                    onToggle={toggle}
+                    initialLoading={initialLoading}
+                    initialError={initialError}
+                    initialRetrying={(listFailed && activeQuery.fetchStatus !== "idle") ||
+                        (pickerFailed && pickerTagsQuery.fetchStatus !== "idle")}
+                    onInitialRetry={retryInitialLoad}
+                    restricted={hasRestrictiveFilters(filters, itemsMode)}
+                    onReset={handleResetFilters}
+                />
 
                 {/* Footer */}
-                <div className="flex items-center gap-2 px-2 h-14 shrink-0 bg-card justify-between">
-                    <div className="flex flex-row gap-2 items-center px-2">
+                <div className="grid min-h-14 shrink-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1 border-t bg-card px-2 py-2 min-[400px]:grid-cols-[auto_minmax(0,1fr)_auto]">
+                    <div className="flex shrink-0 items-center gap-2">
                         <p>Items</p>
 
                         <Switch
+                            aria-label="Show tags"
                             checked={!itemsMode}
-                            onCheckedChange={handleLibrarySwitch}
+                            onCheckedChange={checked => setItemsMode(!checked)}
                         />
 
                         <p>Tags</p>
                     </div>
 
-                    <AddItemButton
-                        size="sm"
-                        onSelectType={type => openItem(type, null, "create")}
-                        items={itemsMode ? itemCreateOptions : tagCreateOptions}
-                    />
+                    <p role="status" className="min-w-0 text-center text-xs tabular-nums text-muted-foreground sm:text-sm">
+                        {selectedKeys.length} selected · {displayedItems.length} loaded
+                    </p>
+
+                    <div className="col-span-full justify-self-center min-[400px]:col-auto min-[400px]:justify-self-end">
+                        <AddItemButton
+                            size="sm"
+                            onSelectType={type => openItem(type, null, "create")}
+                            items={itemsMode ? itemCreateOptions : tagCreateOptions}
+                        />
+                    </div>
                 </div>
             </div>
         </div>

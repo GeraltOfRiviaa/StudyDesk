@@ -5,8 +5,8 @@ import { deleteItem } from "@/api/deleteItem"
 
 async function bulkDeleteTags(items) {
     const results = await Promise.allSettled(items.map(deleteItem))
-    const deleted = results.filter(result => result.status === "fulfilled").length
-    return { deleted, failed: results.length - deleted }
+    const deletedItems = results.filter(result => result.status === "fulfilled").map(result => result.value)
+    return { deleted: deletedItems.length, failed: results.length - deletedItems.length, deletedItems }
 }
 
 export function useBulkDelete(onDeleteSettled) {
@@ -29,10 +29,13 @@ export function useBulkDelete(onDeleteSettled) {
                 : error.message,
             type: "error",
         }),
-        onSettled: (_result, error, { items }) => {
+        onSettled: (result, error, { items }) => {
             // A failed batch may have applied changes. Refresh even when it stays selected for retry.
             const completed = error ? (error.completed ?? 0) : items.length
-            return onDeleteSettled?.(items.slice(0, completed))
+            const completedItems = items.slice(0, completed)
+            // In Items mode a completed batch accounts for every ID, including already missing rows.
+            // Tag deletion reports each fulfilled request because some tags may still exist.
+            return onDeleteSettled?.(completedItems, result?.deletedItems ?? completedItems)
         },
     })
 }
