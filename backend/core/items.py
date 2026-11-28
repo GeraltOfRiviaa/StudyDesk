@@ -9,7 +9,7 @@ from core.collections import ITEM_COLLECTIONS
 from core.links import delete_item_links
 from core.tags import validate_tag_ids
 from database import db
-from models.types import PyObjectId, Tags, Title, TypesEnum
+from models.types import PyObjectId, TagIdInput, Title, TypesEnum
 
 
 def owned_items_query(user_id: PyObjectId, ids: Collection[ObjectId]) -> dict:
@@ -32,14 +32,8 @@ async def get_item(
     return doc
 
 
-async def _prepare_item_tags(user_id: PyObjectId, tags: Tags) -> list[ObjectId]:
-    await validate_tag_ids(user_id, tags)
-    # Normalize hex casing and keep the client's tag order.
-    return list(dict.fromkeys(ObjectId(tag) for tag in tags))
-
-
-async def prepare_item_create(user_id: PyObjectId, title: Title, tags: Tags) -> dict:
-    tag_ids = await _prepare_item_tags(user_id, tags)
+async def prepare_item_create(user_id: PyObjectId, title: Title, tags: TagIdInput) -> dict:
+    tag_ids = await validate_tag_ids(user_id, tags)
     now = datetime.now(timezone.utc)
     return {
         "user_id": ObjectId(user_id),
@@ -62,7 +56,7 @@ async def prepare_item_update(user_id: PyObjectId, data: BaseModel) -> dict:
     if "tags" in changes:
         if changes["tags"] is None:
             raise HTTPException(status_code=400, detail="Invalid tag ids")
-        changes["tags"] = await _prepare_item_tags(user_id, changes["tags"])
+        changes["tags"] = await validate_tag_ids(user_id, changes["tags"])
 
     changes["updated_at"] = datetime.now(timezone.utc)
     return changes

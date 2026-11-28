@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from core.security import get_account_writer, get_current_user
+from core.security import get_account_writer
 from models.users import UserPublic
 
 from models.bulk import (
@@ -39,7 +39,7 @@ async def delete_selected_items(
 )
 async def add_tags(
     data: BulkAddTagsRequest,
-    user: UserPublic = Depends(get_current_user),
+    user: UserPublic = Depends(get_account_writer),
 ):
     return await bulk_add_tags(
         user.id,
@@ -54,7 +54,7 @@ async def add_tags(
 )
 async def remove_tags(
     data: BulkRequest,
-    user: UserPublic = Depends(get_current_user),
+    user: UserPublic = Depends(get_account_writer),
 ):
     return await bulk_remove_tags(
         user.id,
@@ -68,7 +68,7 @@ async def remove_tags(
 )
 async def remove_links(
     data: BulkRequest,
-    user: UserPublic = Depends(get_current_user),
+    user: UserPublic = Depends(get_account_writer),
 ):
     return await bulk_remove_links(
         user.id,

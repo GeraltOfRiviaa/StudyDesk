@@ -86,7 +86,7 @@ function ItemModalContent({ activeItem, onClose, onChanged }) {
         return (
             <ItemDetails id={id} collection="tags" label="tag" onChanged={onChanged}>
                 {(tag, onUpdated) => (
-                    <UpdateTag tag={tag} onClose={onClose} onUpdated={onUpdated} />
+                    <UpdateTag tag={tag} onClose={onClose} onUpdated={onUpdated} onChanged={onChanged} />
                 )}
             </ItemDetails>
         );

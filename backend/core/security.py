@@ -91,8 +91,8 @@ async def get_current_user(request: Request, access_token: str | None = Cookie(d
 
 
 async def get_account_writer(user: UserPublic = Depends(get_current_user)):
-    """Serialize account deletion and writes that must coordinate with it."""
-    # The dev API has one worker. Idle locks are discarded when no request holds them.
+    """Acquire once at the router boundary. Core helpers must not reacquire this lock."""
+    # Waiters and holders keep a strong local reference. The weak entry expires once they all exit.
     lock = _account_write_locks.setdefault(user.id, Lock())
     async with lock:
         # Deletion may have finished while this request waited for the lock.

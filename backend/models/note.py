@@ -1,6 +1,11 @@
 
-from pydantic import BaseModel, ConfigDict, Field, AwareDatetime, model_validator
-from models.types import PyObjectId, Tags, Title, UpdateModel
+from typing import Annotated
+
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StringConstraints
+from models.types import PyObjectId, TagIdInput, Tags, Title, UpdateModel
+
+
+NoteContent = Annotated[str, StringConstraints(max_length=10000)]
 
 class NoteBase(BaseModel):
     title: Title
@@ -8,12 +13,14 @@ class NoteBase(BaseModel):
     
 class NoteCreate(NoteBase):
     model_config = ConfigDict(extra="forbid")
-    content: str = Field(max_length=10000)
+    content: NoteContent
+    tags: TagIdInput = Field(default_factory=list)
     
 class NoteUpdate(UpdateModel):
-    title: Title | None = None
-    content: str | None = None
-    tags: Tags | None = None
+    # Defaults allow omission. Supplied values still validate against the non-nullable types.
+    title: Title = Field(default_factory=lambda: None)
+    content: NoteContent = Field(default_factory=lambda: None)
+    tags: TagIdInput = Field(default_factory=lambda: None)
 
 class NotePublic(NoteBase):
     id: PyObjectId

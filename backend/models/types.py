@@ -97,10 +97,13 @@ TargetDays = Annotated[
     AfterValidator(_no_duplicates),
     Field(default_factory=list, max_length=7),
 ]
+MAX_TAGS_PER_ITEM = 100
+TagIdInput = Annotated[list[PyObjectId], Field(max_length=MAX_TAGS_PER_ITEM)]
+
 Tags = Annotated[
     list[PyObjectId],
     AfterValidator(_no_duplicates),
-    Field(default_factory=list, max_length=100),
+    Field(default_factory=list, max_length=MAX_TAGS_PER_ITEM),
 ]
 
 

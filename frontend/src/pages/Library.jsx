@@ -158,21 +158,15 @@ function Library() {
     }
 
     // Clear confirmed deletions here. The bulk dialog owns its separate retry snapshot.
-    const handleDeleteSettled = async (completedItems, unavailableItems) => {
+    const handleDeleteSettled = async (completedItems) => {
         if (completedItems.length) {
             const completedKeys = new Set(completedItems.map(getRowKey))
             setSelection(previous => ({
                 ...previous,
                 keys: new Set([...previous.keys].filter(key => !completedKeys.has(key))),
             }))
-        }
-        if (unavailableItems.length) {
             // A cached page can still show a deleted row even after the deletion request succeeds.
-            setUnavailableKeys(previous => {
-                const keys = new Set(previous)
-                unavailableItems.forEach(item => keys.add(getRowKey(item)))
-                return keys
-            })
+            setUnavailableKeys(previous => new Set([...previous, ...completedKeys]))
         }
 
         await Promise.all([

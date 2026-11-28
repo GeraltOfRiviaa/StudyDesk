@@ -3,8 +3,8 @@ import { api } from "@/api/client"
 export const deleteItem = async ({ type, id }) => {
     try {
         if (type === "tag"){
-            await api(`/${type}s/?ids=${id}&confirm=true`, { method: "DELETE" })
-            return { type, id }
+            const { deleted } = await api(`/${type}s/?ids=${id}&confirm=true`, { method: "DELETE" })
+            return { type, id, deleted }
         }
         
         await api(`/${type}s/${id}`, { method: "DELETE" })
