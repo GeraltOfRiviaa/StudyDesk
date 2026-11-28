@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useLayoutEffect, useRef, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm, Controller } from "react-hook-form"
@@ -8,14 +8,20 @@ import { InputGroup, InputGroupInput } from "@/components/ui/input-group"
 import { toast, Toaster } from "@/components/ui/toast"
 import { LoginSchema } from "../schemas"
 import { useUser } from "@/context/AuthContext"
-import { api } from "@/api/client"
 import { authRateLimitMessage } from "@/api/accountApi"
 
 function Login() {
-    const { refreshUser } = useUser()
+    const { signIn, refreshUser } = useUser()
     const navigate = useNavigate()
     const { state } = useLocation()
     const [showPassword, setShowPassword] = useState(false)
+    const [verifyAgain, setVerifyAgain] = useState(false)
+    const [verifying, setVerifying] = useState(false)
+    const mounted = useRef(false)
+    useLayoutEffect(() => {
+        mounted.current = true
+        return () => { mounted.current = false }
+    }, [])
 
     const form = useForm({
         resolver: zodResolver(LoginSchema),
@@ -23,20 +29,36 @@ function Login() {
     })
 
     async function onSubmit(data) {
+        setVerifyAgain(false)
         try {
-            await api("/auth/login", {
-                method: "POST",
-                body: new URLSearchParams({ username: data.username, password: data.password }),
-            })
-            /*Load the user before navigating, otherwise the Layout bounces you back*/
-            await refreshUser()
-            navigate("/")
+            handleVerification(await signIn(data))
         } catch (error) {
+            if (!mounted.current) return
             toast.add({
                 title: "Could not authenticate a user",
-                description: authRateLimitMessage(error) ?? "Wrong password or username",
+                description: authRateLimitMessage(error) ?? (error?.status === 401
+                    ? "Wrong password or username" : "Could not complete sign-in. Try again."),
                 type: "error",
             })
+        }
+    }
+
+    function handleVerification(outcome) {
+        if (!mounted.current) return
+        if (outcome === "verified") navigate("/")
+        if (outcome === "unavailable") setVerifyAgain(true)
+        if (outcome === "expired") {
+            setVerifyAgain(false)
+            toast.add({ title: "Session expired. Sign in again.", type: "info" })
+        }
+    }
+
+    async function retryVerification() {
+        setVerifying(true)
+        try {
+            handleVerification(await refreshUser())
+        } finally {
+            if (mounted.current) setVerifying(false)
         }
     }
 
@@ -47,7 +69,7 @@ function Login() {
         <div className="flex h-dvh">
             <Toaster />
             <form
-                onSubmit={form.handleSubmit(onSubmit)}
+                onSubmit={event => form.handleSubmit(onSubmit)(event)}
                 className="flex flex-col mx-auto my-auto w-screen px-20 max-w-100 sm:px-0 lg:max-w-80"
             >
                 <h1 className="font-bold text-4xl text-center py-10">Login</h1>
@@ -108,8 +130,16 @@ function Login() {
                     )}
                 />
 
+                {verifyAgain && (
+                    <div className="flex flex-col items-start gap-2">
+                        <p role="alert">Signed in, but your session could not be verified.</p>
+                        <Button type="button" size="sm" disabled={verifying || form.formState.isSubmitting} onClick={retryVerification}>
+                            Retry verification
+                        </Button>
+                    </div>
+                )}
                 <div className="flex flex-row justify-between mt-4">
-                    <Button type="submit" variant="default" size="sm" className="rounded-md">
+                    <Button type="submit" variant="default" size="sm" className="rounded-md" disabled={verifying || form.formState.isSubmitting}>
                         Login
                     </Button>
                     <Button type="button" variant="outline" size="sm" className="rounded-md" onClick={() => navigate("/register")}>

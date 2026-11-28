@@ -1,5 +1,8 @@
 import { Filter } from "lucide-react"
+import { useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
+import { TagSelector } from "@/components/tags/TagSelector"
 import {
     DropdownMenu,
     DropdownMenuGroup,
@@ -9,7 +12,6 @@ import {
     DropdownMenuSub,
     DropdownMenuSubTrigger,
     DropdownMenuSubContent,
-    DropdownMenuCheckboxItem,
     DropdownMenuRadioGroup,
     DropdownMenuRadioItem,
     DropdownMenuSeparator,
@@ -31,7 +33,6 @@ const sortOptions = [
 export function FilterButton({
     size,
     itemsMode = true,
-    tags = [],
     selectedTags = [],
     match = "any",
     sort = "updated_at",
@@ -42,15 +43,11 @@ export function FilterButton({
     onOrderChange,
     onReset,
 }) {
-    const toggleTag = (id) => {
-        const next = selectedTags.includes(id)
-            ? selectedTags.filter(tagId => tagId !== id)
-            : [...selectedTags, id]
-
-        onTagsChange?.(next)
-    }
+    const [tagPickerOpen, setTagPickerOpen] = useState(false)
+    const filterButton = useRef(null)
 
     return (
+        <>
         <DropdownMenu>
             <DropdownMenuTrigger
                 render={
@@ -59,6 +56,7 @@ export function FilterButton({
                         size={size}
                         className="rounded-lg px-2"
                         aria-label="Filters"
+                        ref={filterButton}
                     >
                         <Filter />
                     </Button>
@@ -68,35 +66,9 @@ export function FilterButton({
             <DropdownMenuContent>
                 <DropdownMenuGroup>
 
-                    {/* Tag selection */}
-                    <DropdownMenuSub>
-                        <DropdownMenuSubTrigger
-                            disabled={!itemsMode}
-                            className="data-disabled:opacity-50"
-                        >
-                            Tags ({selectedTags.length})
-                        </DropdownMenuSubTrigger>
-
-                        <DropdownMenuSubContent>
-                            {tags.length === 0 ? (
-                                <DropdownMenuItem disabled>
-                                    No tags available
-                                </DropdownMenuItem>
-                            ) : (
-                                tags.map(tag => (
-                                    <DropdownMenuCheckboxItem
-                                        key={tag.id}
-                                        checked={selectedTags.includes(tag.id)}
-                                        disabled={match === "none"}
-                                        onCheckedChange={() => toggleTag(tag.id)}
-                                        className="text-white"
-                                    >
-                                        {tag.name}
-                                    </DropdownMenuCheckboxItem>
-                                ))
-                            )}
-                        </DropdownMenuSubContent>
-                    </DropdownMenuSub>
+                    <DropdownMenuItem disabled={!itemsMode || match === "none"} onClick={() => setTagPickerOpen(true)}>
+                        Tags ({selectedTags.length})
+                    </DropdownMenuItem>
 
                     {/* Tag matching */}
                     <DropdownMenuSub>
@@ -183,5 +155,15 @@ export function FilterButton({
                 </DropdownMenuGroup>
             </DropdownMenuContent>
         </DropdownMenu>
+        {tagPickerOpen && (
+            <Dialog open onOpenChange={setTagPickerOpen}>
+                <DialogContent className="max-h-[90dvh] overflow-y-auto" finalFocus={filterButton}>
+                    <DialogTitle>Filter by tags</DialogTitle>
+                    <DialogDescription>Tag selections apply to the Library immediately.</DialogDescription>
+                    <TagSelector value={selectedTags} onChange={onTagsChange} allowCreate={false} />
+                </DialogContent>
+            </Dialog>
+        )}
+        </>
     )
 }

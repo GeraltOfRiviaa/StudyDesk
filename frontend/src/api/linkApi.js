@@ -1,9 +1,14 @@
 import { api } from "@/api/client";
 
 // Links live in their own MongoDB collection, not inside the item document.
-export async function syncItemLinks(sourceType, sourceId, selectedLinks = []) {
+export async function syncItemLinks(sourceType, sourceId, selectedLinks = [], { signal, writeSignal = signal } = {}) {
+    const request = (path, options) => {
+        // Every step must stop if the originating modal or session ends.
+        signal?.throwIfAborted();
+        return api(path, { ...options, signal: options?.method ? writeSignal : signal });
+    };
     const sourcePath = `/links/${sourceType}/${sourceId}`;
-    const existingLinks = await api(sourcePath);
+    const existingLinks = await request(sourcePath);
     const key = item => `${item.item_type}:${item.item_id.toLowerCase()}`;
 
     //written in the DB
@@ -16,7 +21,7 @@ export async function syncItemLinks(sourceType, sourceId, selectedLinks = []) {
         if (existing.has(linkKey)) continue;
 
         try {
-            await api("/links/", {
+            await request("/links/", {
                 method: "POST",
                 json: {
                     item_a_type: sourceType,
@@ -31,7 +36,7 @@ export async function syncItemLinks(sourceType, sourceId, selectedLinks = []) {
             if (body?.detail !== "Items are already linked") throw error;
 
             // A concurrent save may have created the link after the initial read.
-            const currentLinks = await api(sourcePath);
+            const currentLinks = await request(sourcePath);
             if (!currentLinks.some(current => key(current) === linkKey)) throw error;
         }
     }
@@ -39,6 +44,6 @@ export async function syncItemLinks(sourceType, sourceId, selectedLinks = []) {
     // Remove relationships that were deselected in the form.
     for (const [linkKey, link] of existing) {
         if (selected.has(linkKey)) continue;
-        await api(`/links/${link.link_id}`, { method: "DELETE" });
+        await request(`/links/${link.link_id}`, { method: "DELETE" });
     }
 }

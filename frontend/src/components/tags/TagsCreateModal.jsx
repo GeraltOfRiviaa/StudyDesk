@@ -1,5 +1,5 @@
 import {
-    Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle
+    DialogClose, DialogFooter, DialogHeader, DialogTitle
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
@@ -8,32 +8,35 @@ import { CreateTagSchema } from "@/schemas";
 import { api } from "@/api/client";
 import { toast } from "@/components/ui/toast";
 import { TagFields } from "@/components/tags/TagsFields"
+import { useModalWork } from "@/hooks/useModalWork"
 
 // CREATE TAG MODAL
-export function TagCreateModal({ onCreated, onClose }) {
+export function TagCreateModal({ onClose }) {
+    const { signal, write } = useModalWork();
     const form = useForm({
         resolver: zodResolver(CreateTagSchema),
         defaultValues: { name: "", color: "#3b82f6" },
     });
     async function onSubmit(data) {
         try {
-            await api("/tags/", {
+            await write(sessionSignal => api("/tags/", {
                 method: "POST",
                 json: { name: data.name, color: data.color },
-            });
+                signal: sessionSignal,
+            }));
+            if (signal.aborted) return;
 
             toast.add({ title: "Tag created", type: "success" });
             form.reset();
-            
+            onClose?.();
         } catch {
+            if (signal.aborted) return;
             toast.add({
-                title: "Could not create tag",
-                description: "Try again later",
+                title: "Could not confirm tag creation",
+                description: "Check your tags before retrying.",
                 type: "error",
             });
         }
-        onCreated?.()
-        onClose?.()
     }
 
     return (

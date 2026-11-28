@@ -1,14 +1,18 @@
 
-import { createContext, useCallback, useContext, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useLayoutEffect, useRef, useState } from "react";
 import { ItemModalRenderer } from "@/components/items/ItemsModalRenderer"
+import { useUser } from "@/context/AuthContext"
 
 const ItemModalContext = createContext(null);
 
 export function ItemModalProvider({ children }) {
     const [activeItem, setActiveItem] = useState(null);
-    const [itemsRevision, setItemsRevision] = useState(0);
+    const { session } = useUser();
+    const activeScope = useRef(null);
+    const nextOpening = useRef(0);
     const navigationGuard = useRef(null);
 
+    useLayoutEffect(() => () => activeScope.current?.controller.abort(), []);
 
     const registerNavigationGuard = useCallback((guard) => {
         navigationGuard.current = guard;
@@ -23,33 +27,42 @@ export function ItemModalProvider({ children }) {
     // if its not the same note and its safe to navigate
     // then we set the active item to the new item 
     function openItem(type, id = null, action = "update") {
+        if (session.signal.aborted) return;
+        const current = activeScope.current?.item;
         if (
-            activeItem?.type === type &&
-            activeItem?.id === id &&
-            activeItem?.action === action
+            current?.type === type &&
+            current?.id === id &&
+            current?.action === action
         ) return;
 
         if (navigationGuard.current?.() === false) return;
 
         navigationGuard.current = null;
-        setActiveItem({ type, id, action });
+        activeScope.current?.controller.abort();
+        const controller = new AbortController();
+        const item = {
+            type, id, action, opening: ++nextOpening.current,
+            signal: AbortSignal.any([controller.signal, session.signal]),
+        };
+        activeScope.current = { controller, item };
+        setActiveItem(item);
     }
 
     // check whether we can safely navigate
     // if yes then we set the active item to null
-    function closeItem() {
+    function closeItem(expected) {
+        // A callback from a previous opening cannot close the current modal.
+        if (expected.signal.aborted || activeScope.current?.item !== expected) return;
         if (navigationGuard.current?.() === false) return;
         navigationGuard.current = null;
+        activeScope.current.controller.abort();
+        activeScope.current = null;
         setActiveItem(null);
-    }
-
-    function notifyItemsChanged() {
-        setItemsRevision(prev => prev + 1);
     }
 
     return (
         <ItemModalContext.Provider
-            value={{ activeItem, openItem, closeItem, itemsRevision, notifyItemsChanged, registerNavigationGuard }}
+            value={{ activeItem, openItem, closeItem, registerNavigationGuard }}
         >
             {children}
             <ItemModalRenderer />

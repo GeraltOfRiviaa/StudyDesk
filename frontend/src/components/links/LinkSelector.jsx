@@ -22,27 +22,26 @@ export function LinkSelector({
     sourceType = null,
     sourceId = null,
 }) {
-    const [items, setItems] = useState([]);
     const [query, setQuery] = useState("");
-    const [loading, setLoading] = useState(false);
-    const { openItem } = useItemModal();
+    const [result, setResult] = useState(null);
+    const { activeItem, openItem } = useItemModal();
+    const modalSignal = activeItem.signal;
+    const term = query.trim();
+    const items = result?.term === term ? result.items : [];
+    const loading = !!term && result?.term !== term;
 
     // Search matching items in the database
     useEffect(() => {
-        if (!query.trim()) {
-            setItems([]);
-            setLoading(false);
-            return;
-        }
-
-        let active = true;
-        setLoading(true);
+        if (!term) return;
+        const controller = new AbortController();
+        const signal = AbortSignal.any([controller.signal, modalSignal]);
 
         // Debounce requests while typing
         const timeout = setTimeout(async () => {
+            if (signal.aborted) return;
             try {
                 const params = new URLSearchParams({
-                    q: query.trim(),
+                    q: term,
                     limit: "20",
                 });
 
@@ -52,25 +51,23 @@ export function LinkSelector({
                 }
 
                 const results = await api(
-                    `/links/items?${params.toString()}`
+                    `/links/items?${params.toString()}`, { signal }
                 );
 
-                if (active) setItems(results);
+                if (!signal.aborted) setResult({ term, items: results });
             } catch (error) {
-                if (active) {
+                if (!signal.aborted) {
                     console.error("Could not search items", error);
-                    setItems([]);
+                    setResult({ term, items: [] });
                 }
-            } finally {
-                if (active) setLoading(false);
             }
         }, 300);
 
         return () => {
-            active = false;
+            controller.abort();
             clearTimeout(timeout);
         };
-    }, [query, sourceType, sourceId]);
+    }, [term, sourceType, sourceId, modalSignal]);
 
 
     // Exclude items already selected
@@ -83,6 +80,7 @@ export function LinkSelector({
 
 
     function selectLink(item) {
+        if (modalSignal.aborted) return;
         const exists = value.some(link =>
             link.item_id === item.id &&
             link.item_type === item.type
@@ -100,11 +98,12 @@ export function LinkSelector({
         }
 
         setQuery("");
-        setItems([]);
+        setResult(null);
     }
 
 
     function removeLink(link) {
+        if (modalSignal.aborted) return;
         onChange(value.filter(item =>
             !(item.item_id === link.item_id &&
                 item.item_type === link.item_type)

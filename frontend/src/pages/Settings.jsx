@@ -14,7 +14,7 @@ import { useUser} from "@/context/AuthContext"
 import { DeleteAccountButton } from "@/components/settings/DeleteAccountButton"
 
 function Settings() {
-    const { user, refreshUser } = useUser()
+    const { user, session, refreshUser } = useUser()
     const navigate = useNavigate()
 
     async function onSubmit(data) {
@@ -25,14 +25,21 @@ function Settings() {
         }
 
         try {
-            await api("/auth/me", { method: "PATCH", json: changes })
-            await refreshUser()
+            await api("/auth/me", { method: "PATCH", json: changes, signal: session.signal })
+            if (session.signal.aborted) return
+            const outcome = await refreshUser()
+            if (session.signal.aborted) return
             form.reset()
-            toast.add({ title: "User updated", type: "success" })
+            toast.add(outcome === "unavailable"
+                ? { title: "Profile saved, but could not be refreshed", description: "Try refreshing the page.", type: "info" }
+                : { title: "User updated", type: "success" })
         } catch (err) {
+            if (session.signal.aborted) return
+            const description = await identityConflictMessage(err)
+            if (session.signal.aborted) return
             toast.add({
                 title: "Could not update the user",
-                description: await identityConflictMessage(err) ?? "Try again later",
+                description: description ?? "Try again later",
                 type: "error",
             })
         }

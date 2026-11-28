@@ -22,8 +22,10 @@ import { useBulkRemoveLinks } from "@/hooks/useBulkRemoveLinks"
 import { useBulkSetTags } from "@/hooks/useBulkSetTags"
 import { useBulkUnlinkTags } from "@/hooks/useBulkUnlinkTags"
 import { bulkErrorDescription, bulkTargetKey } from "@/api/bulkApi"
+import { useUser } from "@/context/AuthContext"
 
 export function BulkActionsButton({ size, selected, itemsMode, onDeleteSettled }) {
+    const { session } = useUser()
     const [action, setAction] = useState(null)
     const submitting = useRef(false)
     const bulkDelete = useBulkDelete(onDeleteSettled)
@@ -63,13 +65,14 @@ export function BulkActionsButton({ size, selected, itemsMode, onDeleteSettled }
     }
 
     async function submitAction(submit, tags) {
-        if (!itemCount || submitting.current) return
+        if (!itemCount || submitting.current || session.signal.aborted) return
 
         submitting.current = true
         try {
             await submit({ items: action.items, tags })
-            setAction(null)
+            if (!session.signal.aborted) setAction(null)
         } catch (error) {
+            if (session.signal.aborted) return
             // A failed batch can report completed targets anywhere in the selection.
             const completed = new Set((error.completedItems ?? []).map(bulkTargetKey))
             const remaining = action.items.filter(item => !completed.has(bulkTargetKey(item)))

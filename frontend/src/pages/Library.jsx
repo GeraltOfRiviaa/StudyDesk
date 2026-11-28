@@ -7,10 +7,9 @@ import { AddItemButton } from "@/components/buttons/AddItemsButton"
 import { Checkbox } from "@/components/ui/checkbox"
 import { LibraryResults } from "@/components/library/LibraryResults"
 
-import { useEffect, useState } from "react"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 
-import { api } from "@/api/client"
 import { useUser } from "@/context/AuthContext"
 import { useItemModal } from "@/context/ItemsModalContext"
 import { useLibraryFilters } from "@/hooks/useLibraryFilters"
@@ -18,6 +17,7 @@ import { useLibrary, useLibrarySequence, useLibraryTags } from "@/hooks/useLibra
 import { useDebounce } from "@/hooks/useDebounce"
 import { useTagLookup } from "@/hooks/useTagLookup"
 import { ITEM_TYPES } from "@/lib/itemTypes"
+import { refreshAccountQueries } from "@/lib/accountQueries"
 
 const itemCreateOptions = Object.values(ITEM_TYPES).map(({ type, label }) => ({
     type,
@@ -46,8 +46,8 @@ function Library() {
     const [itemsMode, setItemsMode] = useState(true)
     const [unavailableKeys, setUnavailableKeys] = useState(() => new Set())
 
-    const { user } = useUser()
-    const { itemsRevision, openItem } = useItemModal()
+    const { user, session } = useUser()
+    const { openItem } = useItemModal()
     const queryClient = useQueryClient()
 
     // Read filters from URL
@@ -80,33 +80,17 @@ function Library() {
     const itemsQuery = useLibrary(itemParams, itemsMode && !isSearchPending, sequence.id)
     const libraryTagsQuery = useLibraryTags(tagParams, !itemsMode && !isSearchPending, sequence.id)
 
-    const pickerTagsQuery = useQuery({
-        queryKey: ["tags", user?.id],
-        queryFn: ({ signal }) => api("/tags/", { signal }),
-        enabled: itemsMode && !!user?.id,
-    })
-
-    const pickerTags = pickerTagsQuery.data ?? []
-    const listedTagIds = new Set(pickerTags.map(tag => tag.id))
-    const missingItemTagIds = itemsMode && pickerTagsQuery.data !== undefined
-        ? itemsQuery.items.flatMap(item => item.tags ?? [])
-            .filter(id => !listedTagIds.has(id))
-        : []
-    const extraTags = useTagLookup(missingItemTagIds)
-    const itemTags = [...pickerTags, ...extraTags]
+    const itemTags = useTagLookup(itemsMode ? itemsQuery.items.flatMap(item => item.tags ?? []) : [])
 
     const activeQuery = itemsMode ? itemsQuery : libraryTagsQuery
-    const pickerMissing = itemsMode && pickerTagsQuery.data === undefined
-    const pickerFailed = pickerMissing && pickerTagsQuery.isError
     const listFailed = activeQuery.isError && activeQuery.items.length === 0
-    const initialError = !isSearchPending && (listFailed || pickerFailed)
-    const initialLoading = isSearchPending || (!initialError && (!activeQuery.hasData || pickerMissing))
+    const initialError = !isSearchPending && listFailed
+    const initialLoading = isSearchPending || (!initialError && !activeQuery.hasData)
     const displayedItems = initialLoading || initialError ? [] :
         activeQuery.items.filter(item => !unavailableKeys.has(getRowKey(item)))
 
     const retryInitialLoad = () => {
         if (listFailed) void activeQuery.refetch({ cancelRefetch: false })
-        if (pickerFailed) void pickerTagsQuery.refetch({ cancelRefetch: false })
     }
 
     const reloadResults = () => {
@@ -114,19 +98,6 @@ function Library() {
         setSelection(previous => ({ ...previous, autoSelect: false }))
         sequence.restart()
     }
-
-    // Refresh cached data when an item changes
-    useEffect(() => {
-        if (!itemsRevision) return
-
-        queryClient.invalidateQueries({
-            queryKey: ["library", user?.id],
-        })
-
-        queryClient.invalidateQueries({
-            queryKey: ["tags", user?.id],
-        })
-    }, [itemsRevision, queryClient, user?.id])
 
     const toggle = (type, id) => {
         const key = getRowKey({ type, id })
@@ -168,6 +139,7 @@ function Library() {
 
     // Clear confirmed deletions here. The bulk dialog owns its separate retry snapshot.
     const handleDeleteSettled = async (completedItems) => {
+        if (session.signal.aborted) return
         if (completedItems.length) {
             const completedKeys = new Set(completedItems.map(getRowKey))
             setSelection(previous => ({
@@ -178,14 +150,7 @@ function Library() {
             setUnavailableKeys(previous => new Set([...previous, ...completedKeys]))
         }
 
-        await Promise.all([
-            queryClient.invalidateQueries({
-                queryKey: ["library", user?.id],
-            }),
-            queryClient.invalidateQueries({
-                queryKey: ["tags", user?.id],
-            }),
-        ])
+        await refreshAccountQueries(queryClient, session)
     }
 
     // Convert selection keys into objects for bulk actions
@@ -241,7 +206,6 @@ function Library() {
                     <FilterButton
                         size="sm"
                         itemsMode={itemsMode}
-                        tags={pickerTags}
                         selectedTags={filters.match === "none" ? [] : filters.tags}
                         match={filters.match}
                         sort={itemsMode ? filters.sort : tagSort}
@@ -293,8 +257,7 @@ function Library() {
                     onToggle={toggle}
                     initialLoading={initialLoading}
                     initialError={initialError}
-                    initialRetrying={(listFailed && activeQuery.fetchStatus !== "idle") ||
-                        (pickerFailed && pickerTagsQuery.fetchStatus !== "idle")}
+                    initialRetrying={listFailed && activeQuery.fetchStatus !== "idle"}
                     onInitialRetry={retryInitialLoad}
                     onReload={reloadResults}
                     restricted={hasRestrictiveFilters(filters, itemsMode)}

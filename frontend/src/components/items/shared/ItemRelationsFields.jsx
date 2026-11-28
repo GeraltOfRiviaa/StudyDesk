@@ -3,9 +3,11 @@ import { Controller } from "react-hook-form";
 import { LinkSelector } from "@/components/links/LinkSelector";
 import { TagSelector } from "@/components/tags/TagSelector";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import { useItemModal } from "@/context/ItemsModalContext";
 
 export function ItemRelationsFields({ control, sourceType, sourceId }) {
     const id = useId();
+    const { activeItem } = useItemModal();
 
     return (
         <>
@@ -22,7 +24,7 @@ export function ItemRelationsFields({ control, sourceType, sourceId }) {
                         <FieldDescription id={`${id}-tags-help`} className="sr-only">
                             Choose the tags to attach when you submit.
                         </FieldDescription>
-                        <TagSelector value={field.value ?? []} onChange={field.onChange} />
+                        <TagSelector value={field.value ?? []} onChange={field.onChange} modalSignal={activeItem.signal} />
                         {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                     </Field>
                 )}

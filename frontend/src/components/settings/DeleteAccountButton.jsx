@@ -15,21 +15,25 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useUser } from "@/context/AuthContext"
+import { refreshAccountQueries } from "@/lib/accountQueries"
 
 export function DeleteAccountButton() {
     const [open, setOpen] = useState(false)
     const confirmation = useRef(null)
-    const { clearSession } = useUser()
+    const { clearSession, session } = useUser()
     const queryClient = useQueryClient()
     const deletion = useMutation({
         // Keep the password out of mutation variables, which are stored in the cache.
-        mutationFn: () => deleteAccount(confirmation.current),
+        mutationFn: () => {
+            session.signal.throwIfAborted()
+            return deleteAccount(confirmation.current, { signal: session.signal })
+        },
         networkMode: "always",
         retry: false,
-        onSuccess: () => clearSession({ accountDeleted: true }),
+        onSuccess: () => clearSession({ accountDeleted: true, expectedSession: session }),
         onError: (error) => {
             // Cleanup may have removed some documents before the failure.
-            if (error.cause?.status === 503) void queryClient.invalidateQueries()
+            if (error.cause?.status === 503) void refreshAccountQueries(queryClient, session)
         },
     })
 
