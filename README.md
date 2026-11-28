@@ -71,6 +71,11 @@ docker compose -f docker-compose.dev.yml exec api python seed.py --dev --reset
 ```
 docker compose -f docker-compose.dev.yml exec api python seed.py --dev --clear
 ```
+**Demo account credentials**
+```
+Username: studydesk-demo
+Password: StudyDeskDemo123!
+```
 
 ### Shadcn preset code
 b2C8Rr6hs

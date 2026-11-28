@@ -116,8 +116,9 @@ export function TagSelector({ value = [], onChange, allowCreate = true, disabled
         }
     }
 
+    // Let the dialog constrain the picker even when a tag has a long, unbroken name.
     return (
-        <div className="flex flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-2">
 
             <Command shouldFilter={false}>
                 <CommandInput
@@ -170,12 +171,13 @@ export function TagSelector({ value = [], onChange, allowCreate = true, disabled
                 {selectedTags.map(tag => (
                     <div
                         key={tag.id}
-                        className="flex items-center gap-1"
+                        className="flex min-w-0 max-w-full items-center gap-1"
                     >
                         <TagBadge tag={tag} />
 
                         <button
                             type="button"
+                            className="shrink-0"
                             disabled={disabled}
                             onClick={() => removeTag(tag.id)}
                             aria-label={`Remove ${tag.name}`}

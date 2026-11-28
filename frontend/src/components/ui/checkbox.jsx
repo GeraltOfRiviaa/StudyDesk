@@ -1,6 +1,6 @@
 import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox"
 import { cn } from "cn"
-import { CheckIcon } from "lucide-react"
+import { CheckIcon, MinusIcon } from "lucide-react"
 
 function Checkbox({
   className,
@@ -16,8 +16,9 @@ function Checkbox({
       {...props}>
       <CheckboxPrimitive.Indicator
         data-slot="checkbox-indicator"
-        className="grid place-content-center text-current transition-none [&>svg]:size-3.5">
-        <CheckIcon />
+        className="group/indicator grid place-content-center text-current transition-none [&>svg]:size-3.5">
+        <CheckIcon className="group-data-indeterminate/indicator:hidden" />
+        <MinusIcon className="hidden group-data-indeterminate/indicator:block" />
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>
   );

@@ -42,9 +42,7 @@ export function LibraryRow({ item, tags, selected, onToggle }) {
                         key={tag.id}
                         className={`min-w-0 shrink ${index === 1 ? "hidden md:block" : index === 2 ? "hidden lg:block" : "block"}`}
                     >
-                        <div className="min-w-0 truncate *:max-w-full *:truncate">
-                            <TagBadge tag={tag} />
-                        </div>
+                        <TagBadge tag={tag} />
                     </div>
                 ))}
                 {itemTags.length > 1 && (
