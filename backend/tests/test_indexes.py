@@ -4,6 +4,7 @@ import unittest
 from collections import Counter
 from datetime import datetime, timezone
 from secrets import token_hex
+from tempfile import TemporaryDirectory
 from unittest.mock import AsyncMock, patch
 
 from bson import ObjectId
@@ -43,6 +44,7 @@ class DatabaseIndexTests(unittest.IsolatedAsyncioTestCase):
         self.enterContext(patch.dict(os.environ, {
             "JWT_SECRET": token_hex(32), "FRONTEND_ORIGINS": ORIGIN,
             "AUTH_COOKIE_SECURE": "false", "FORWARDED_ALLOW_IPS": "",
+            "FILE_STORAGE_ROOT": os.path.realpath(self.enterContext(TemporaryDirectory())),
         }))
         self.enterContext(patch("main.db", self.db))
         self.enterContext(patch.object(items, "db", self.db))

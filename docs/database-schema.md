@@ -47,15 +47,17 @@ Accounts use password authentication. Google sign-in handlers are deferred.
 | `_id` | ObjectId | Primary key |
 | `user_id` | ObjectId | References users |
 | `title` | string | Display title |
-| `filename` | string | File name |
-| `storage_path` | string | Stored file location |
+| `filename` | string | Original file name. Duplicate names are allowed. |
+| `storage_path` | string | Internal relative path generated as `{user_id}/{file_id}.{extension}`. |
 | `mime_type` | string | MIME type |
-| `size` | int | File size |
-| `sha256` | str | Checksum |
-| `status` | str | Status of the file |
+| `size` | int | File size in bytes |
+| `sha256` | string | Exactly 64 lowercase hexadecimal characters. Duplicate hashes are allowed and the field is unindexed. |
+| `status` | string | `pending`, `ready`, or `deleting` |
 | `tags` | ObjectId[] | References tags |
 | `created_at` | date | Creation date |
 | `updated_at` | date | Last update |
+
+Only `title` and `tags` are user-editable. Public file models omit `storage_path`, `sha256`, and `status`.
 
 ### events
 

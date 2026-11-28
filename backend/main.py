@@ -3,6 +3,7 @@ from typing import Annotated, Literal
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, Query, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -14,13 +15,17 @@ from core.auth_config import (
     url_origin,
     validate_trusted_proxy_config,
 )
+from core.collections import ITEM_COLLECTIONS
+from core.file_config import load_file_settings
+from core.files import FileUploadService
 from core.indexes import initialize_indexes
 from core.limiter import AuthLimiter
 from core.pagination import InvalidCursor
 from core.search import ItemSort, TagMatch, filtered_list
+from core.storage import verify_storage
 from database import db
 from models.users import UserPublic
-from models.types import PyObjectId, Title, PaginatedItems
+from models.types import PyObjectId, Title, PaginatedItems, TypesEnum
 from core.security import get_current_user
 from routers import users, notes, tags, links, bulk
 
@@ -31,6 +36,10 @@ async def lifespan(app: FastAPI):
     app.state.auth_cookie_secure = load_secure_cookie_flag()
     validate_trusted_proxy_config()
     app.state.auth_limiter = AuthLimiter()
+    file_settings = load_file_settings()
+    await run_in_threadpool(verify_storage, file_settings.root)
+    app.state.file_settings = file_settings
+    app.state.file_uploads = FileUploadService(file_settings, db[ITEM_COLLECTIONS[TypesEnum.file]])
     # Finish index checks and builds before FastAPI accepts requests.
     await initialize_indexes(db)
     yield

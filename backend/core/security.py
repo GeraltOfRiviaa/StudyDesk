@@ -1,4 +1,5 @@
 from asyncio import Lock
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from weakref import WeakValueDictionary
 
@@ -93,10 +94,16 @@ async def get_current_user(request: Request, access_token: str | None = Cookie(d
 
 async def get_account_writer(user: UserPublic = Depends(get_current_user)):
     """Acquire once at the router boundary. Core helpers must not reacquire this lock."""
+    async with account_writer(user):
+        yield user
+
+
+@asynccontextmanager
+async def account_writer(user: UserPublic):
     # Waiters and holders keep a strong local reference. The weak entry expires once they all exit.
     lock = _account_write_locks.setdefault(user.id, Lock())
     async with lock:
         # Deletion may have finished while this request waited for the lock.
         if not await users_collection.find_one({"_id": ObjectId(user.id)}, {"_id": 1}):
             raise CREDENTIALS_ERROR
-        yield user
+        yield

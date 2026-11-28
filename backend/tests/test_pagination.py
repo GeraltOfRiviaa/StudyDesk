@@ -4,6 +4,7 @@ import os
 import unittest
 from datetime import datetime, timedelta, timezone
 from secrets import token_hex
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from bson import ObjectId
@@ -65,6 +66,7 @@ class PaginationTests(unittest.IsolatedAsyncioTestCase):
         self.enterContext(patch.dict(os.environ, {
             "JWT_SECRET": token_hex(32), "FRONTEND_ORIGINS": "http://localhost:5173",
             "AUTH_COOKIE_SECURE": "false", "FORWARDED_ALLOW_IPS": "",
+            "FILE_STORAGE_ROOT": os.path.realpath(self.enterContext(TemporaryDirectory())),
         }))
         self.enterContext(patch("main.db", self.db))
         self.enterContext(patch.object(search, "db", self.db))

@@ -4,8 +4,6 @@ from typing import Annotated
 from enum import Enum
 
 
-MAX_FILE_SIZE = 10 * 1024 * 1024
-
 #Pydantic doesn't know how to validate Mongos ObjectId 
 #so we have to validate it ourselves
 def _validate_object_id(v):
@@ -71,9 +69,7 @@ Password = Annotated[str, StringConstraints(min_length=8), AfterValidator(_valid
 Tag = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=50)]
 HexColor = Annotated[str, StringConstraints(pattern=r"^#[0-9a-fA-F]{6}$")]
 Title = Annotated[str, StringConstraints(min_length=1, max_length=150)]
-StoragePath = Annotated[str, StringConstraints(min_length=1, max_length=255)]
 FileName = Annotated[str, StringConstraints(min_length=1, max_length=255)]
-FileSizeLimit = Annotated[int, Field(ge=1, le=MAX_FILE_SIZE)]
 Interval = Annotated[int, Field(ge=1, le=365)]
 Description = Annotated[str, StringConstraints(min_length=1, max_length=600)]
 QuestionTitle = Annotated[str, StringConstraints(min_length=1,max_length=300)]

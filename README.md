@@ -43,7 +43,7 @@ Watch handles changes automatically:
 ```
 docker compose -f docker-compose.dev.yml down
 ```
-Data is kept in the `studydesk` volume. Use `down -v` to delete it.
+MongoDB data is kept in the `studydesk` volume. File storage uses a separate `studydesk_uploads` volume. `down -v` deletes both volumes.
 
 ### Services
 | Service  | URL                                    |
@@ -52,6 +52,27 @@ Data is kept in the `studydesk` volume. Use `down -v` to delete it.
 | API      | http://localhost:8000                  |
 | API docs | http://localhost:8000/docs             |
 | MongoDB  | `mongodb://localhost:27018` (Compass)  |
+
+### File storage settings
+
+| Setting | Default |
+|---------|---------|
+| `FILE_STORAGE_ROOT` | `/data/uploads` |
+| `FILE_MAX_SIZE` | `10485760` bytes (10 MiB) |
+| `FILE_USER_QUOTA` | `524288000` bytes (500 MiB) |
+| `FILE_GLOBAL_QUOTA` | `4294967296` bytes (4 GiB) |
+| `FILE_UPLOAD_CONCURRENCY` | `4` in-flight uploads per worker |
+| `FILE_VALIDATION_CONCURRENCY` | `2` validation processes per worker |
+| `FILE_UPLOAD_READ_TIMEOUT_SECONDS` | `60` seconds to receive the request |
+| `FILE_VALIDATION_TIMEOUT_SECONDS` | `10` seconds per validation process |
+| `FILE_VALIDATION_MEMORY_BYTES` | `536870912` bytes (512 MiB) of address space per validation process |
+| `FILE_DISK_HEADROOM_BYTES` | `104857600` bytes (100 MiB) of free space after an upload |
+
+Compose mounts the uploads volume at `/data/uploads` and sets the API's storage root to match. Watch syncs backend code to `/app`. To use a custom root with Compose, change both the volume target and the API's `FILE_STORAGE_ROOT`. Set size and quota overrides in `.env.local` and recreate the API container. The limits must be positive integers and satisfy `FILE_MAX_SIZE <= FILE_USER_QUOTA <= FILE_GLOBAL_QUOTA`.
+
+For a direct backend launch, provision an existing absolute storage directory outside the application tree and set `FILE_STORAGE_ROOT` to it. Startup verifies that the API can write and read a temporary file there. The deployment must mount the persistent volume at the configured path.
+
+The upload handler is exercised through backend tests in Linux Docker. Public registration follows readiness filtering, deletion integration, and recovery. Publication assumes one API worker with exclusive write access to the managed volume. Set upload and validation limits in `.env.local` and recreate the API after changing them. Allow RAM for the API, the incoming upload spools, and up to `FILE_VALIDATION_CONCURRENCY` validation processes. Multipart requests have a hard 11 MiB limit including the file and envelope.
 
 ### Authentication settings
 

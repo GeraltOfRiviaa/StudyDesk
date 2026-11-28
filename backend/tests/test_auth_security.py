@@ -3,6 +3,7 @@ import unittest
 from contextlib import ExitStack, contextmanager
 from datetime import datetime, timedelta, timezone
 from secrets import token_hex
+from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
@@ -83,6 +84,7 @@ class AuthenticationTests(unittest.TestCase):
             "FRONTEND_ORIGINS": ORIGIN,
             "AUTH_COOKIE_SECURE": "false",
             "FORWARDED_ALLOW_IPS": "",
+            "FILE_STORAGE_ROOT": os.path.realpath(self.enterContext(TemporaryDirectory())),
         }))
         self.store = MemoryUsers()
         self.enterContext(patch.object(users, "users_collection", self.store))

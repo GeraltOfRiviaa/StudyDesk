@@ -4,6 +4,7 @@ import unittest
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from secrets import token_hex
+from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
@@ -47,6 +48,7 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
             "FRONTEND_ORIGINS": ORIGIN,
             "AUTH_COOKIE_SECURE": "false",
             "FORWARDED_ALLOW_IPS": "",
+            "FILE_STORAGE_ROOT": os.path.realpath(self.enterContext(TemporaryDirectory())),
         }))
         self.user = UserPublic(id=OWNER, email="owner@example.com", username="owner", created_at=NOW)
         self.enterContext(patch.object(
