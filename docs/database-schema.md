@@ -51,6 +51,8 @@ Accounts use password authentication. Google sign-in handlers are deferred.
 | `storage_path` | string | Stored file location |
 | `mime_type` | string | MIME type |
 | `size` | int | File size |
+| `sha256` | str | Checksum |
+| `status` | str | Status of the file |
 | `tags` | ObjectId[] | References tags |
 | `created_at` | date | Creation date |
 | `updated_at` | date | Last update |
