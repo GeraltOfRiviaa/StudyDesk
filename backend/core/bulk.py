@@ -1,17 +1,24 @@
+import logging
 from datetime import datetime, timezone
 
 from bson import ObjectId
 from fastapi import HTTPException
+from pymongo.errors import PyMongoError
 
 from database import db
 from core.collections import ITEM_COLLECTIONS
+from core.items import delete_items, owned_items_query, prepare_item_deletion
 from models.types import PyObjectId, TypesEnum
 from models.bulk import (
+    BulkDeleteResult,
     BulkItem,
     BulkUpdateResult,
     BulkUnlinkResult,
 )
 from core.tags import validate_tag_ids
+
+
+logger = logging.getLogger(__name__)
 
 
 # Group selected item IDs by their type
@@ -24,14 +31,6 @@ def group_items(items: list[BulkItem]):
         )
 
     return grouped
-
-
-# Build a query for selected items owned by the user
-def owned_items_query(user_id, ids):
-    return {
-        "user_id": ObjectId(user_id),
-        "_id": {"$in": list(ids)},
-    }
 
 
 # Check that all selected items belong to the user
@@ -48,6 +47,34 @@ async def validate_items(user_id, grouped):
                 status_code=404,
                 detail="One or more items not found"
             )
+
+
+async def bulk_delete(user_id: PyObjectId, items: list[BulkItem]) -> BulkDeleteResult:
+    grouped = group_items(items)
+    deleted = 0
+
+    try:
+        # Check all groups before writing so a dependency conflict leaves the batch intact.
+        owned_groups = {}
+        for item_type, ids in grouped.items():
+            owned_groups[item_type] = await prepare_item_deletion(user_id, item_type, ids)
+
+        for item_type, ids in owned_groups.items():
+            deleted += await delete_items(user_id, item_type, ids, preflighted=True)
+    except PyMongoError:
+        # A failed write might have applied. Report only acknowledged deletions.
+        logger.exception("Bulk deletion interrupted for user %s", user_id)
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "message": "Bulk deletion was interrupted. Some changes may already have applied. Try again to finish.",
+                "deleted": deleted,
+            },
+        ) from None
+
+    # An unavailable ID looks the same whether it is missing or belongs to another user.
+    requested = sum(len(ids) for ids in grouped.values())
+    return BulkDeleteResult(deleted=deleted, skipped=requested - deleted)
 
 
 # Add tags to selected items without duplicates

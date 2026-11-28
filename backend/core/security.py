@@ -94,7 +94,7 @@ async def get_current_user(access_token: str | None = Cookie(default=None)) -> U
 
 
 async def get_account_writer(user: UserPublic = Depends(get_current_user)):
-    """Serialize account deletion with requests that create owned documents."""
+    """Serialize account deletion and writes that must coordinate with it."""
     # The dev API has one worker. Idle locks are discarded when no request holds them.
     lock = _account_write_locks.setdefault(user.id, Lock())
     async with lock:

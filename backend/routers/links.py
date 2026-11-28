@@ -11,7 +11,8 @@ from models.users import UserPublic
 from models.types import PyObjectId, TypesEnum
 from database import db
 from core.security import get_account_writer, get_current_user
-from core.links import item_links_query, link_exists, normalize_link, to_link, validate_item
+from core.items import get_item
+from core.links import item_links_query, link_exists, normalize_link, to_link
 
 import re
 from core.collections import ITEM_COLLECTIONS
@@ -49,7 +50,7 @@ async def search_link_items(
 
     # Exclude the source item and items already linked to it
     if source_type and source_id:
-        await validate_item(user.id, source_type, source_id)
+        await get_item(user.id, source_type, source_id)
 
         source = (source_type.value, source_id)
         excluded.add(source)
@@ -127,7 +128,7 @@ async def get_item_links(
     user: UserPublic = Depends(get_current_user),
 ):
     # validate item we are finding links for
-    await validate_item(user.id, item_type, item_id)
+    await get_item(user.id, item_type, item_id)
 
     # find every link with this item
     docs = await links_collection.find(
@@ -213,11 +214,11 @@ async def create_link(
     user: UserPublic = Depends(get_account_writer),
 ):
     # Check existence and ownership of both items
-    await validate_item(
+    await get_item(
         user.id, link.item_a_type, link.item_a_id
     )
 
-    await validate_item(
+    await get_item(
         user.id, link.item_b_type, link.item_b_id
     )
 
