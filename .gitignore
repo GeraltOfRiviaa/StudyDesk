@@ -3,3 +3,4 @@
 node_modules
 pyrightconfig.json
 backend/.venv
+__pycache__
