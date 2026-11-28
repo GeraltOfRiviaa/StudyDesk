@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { toast } from "@/components/ui/toast"
+import { toast } from "@/lib/toast"
 import { useUser } from "@/context/AuthContext"
 import { bulkErrorDescription } from "@/api/bulkApi"
 import { refreshAccountQueries } from "@/lib/accountQueries"

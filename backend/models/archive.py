@@ -1,7 +1,7 @@
 
 from datetime import datetime
 from mimetypes import MimeTypes
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 from models.types import FileName, FileSizeLimit, PyObjectId, StoragePath, Tags, Title, UpdateModel
 
 

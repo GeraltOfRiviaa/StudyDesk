@@ -5,7 +5,7 @@ import { api } from "@/api/client";
 import { TagBadge } from "@/components/tags/TagBadge";
 import { Button } from "@/components/ui/button";
 import { Command, CommandGroup, CommandItem, CommandList, CommandInput } from "@/components/ui/command";
-import { toast } from "@/components/ui/toast";
+import { toast } from "@/lib/toast";
 import { useUser } from "@/context/AuthContext";
 import { useTagLookup } from "@/hooks/useTagLookup";
 import { useTagSearch } from "@/hooks/useTagSearch";

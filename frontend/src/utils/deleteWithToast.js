@@ -1,4 +1,4 @@
-import { toast } from "@/components/ui/toast";
+import { toast } from "@/lib/toast";
 import { deleteItem } from "@/api/deleteItem";
 
 

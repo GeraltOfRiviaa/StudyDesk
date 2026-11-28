@@ -315,6 +315,7 @@ class MongoIntegrityTests(ApiTests):
         await self.db.tags.insert_one({"_id": OTHER_TAG, "user_id": FOREIGN, "name": "Foreign"})
         data = {"tags": [str(TAG).upper(), str(TAG), str(TAG)]}
         created = await self.client.post("/notes/", json={"title": "New", "content": "", **data})
+        self.assertEqual(set(created.json()), {"inserted_id"})
         self.assertEqual(created.status_code, 201, created.text)
         self.assertEqual((await self.db.notes.find_one({"_id": ObjectId(created.json()["inserted_id"])}))["tags"], [TAG])
         self.assertEqual((await self.client.patch(f"/notes/{NOTE}", json=data)).status_code, 200)
@@ -419,7 +420,19 @@ class MongoIntegrityTests(ApiTests):
         doc = await self.db.links.find_one({})
         self.assertEqual((doc["item_a_id"], doc["item_b_id"]), tuple(sorted((NOTE, SECOND))))
 
-        await self.client.delete(f"/links/{doc['_id']}")
+        with patch.object(link_routes, "db", self.db):
+            search = await self.client.get("/links/items", params={"q": "Fixture", "item_type": "note"})
+            self.assertEqual(search.status_code, 200)
+            self.assertCountEqual(search.json(), [
+                {"id": str(item_id), "type": "note", "title": "Fixture"} for item_id in (NOTE, SECOND)
+            ])
+            adjacent = await self.client.get(f"/links/note/{NOTE}")
+            self.assertEqual(adjacent.status_code, 200)
+            self.assertEqual(adjacent.json(), [{
+                "link_id": str(doc["_id"]), "item_id": str(SECOND), "item_type": "note", "title": "Fixture",
+            }])
+        deleted_link = await self.client.delete(f"/links/{doc['_id']}")
+        self.assertEqual((deleted_link.status_code, deleted_link.json()), (200, {"deleted": 1}))
         reverse = {**doc, "item_a_id": doc["item_b_id"], "item_b_id": doc["item_a_id"]}
         await self.db.links.insert_one(reverse)
         self.assertEqual((await link(NOTE, SECOND)).status_code, 409)

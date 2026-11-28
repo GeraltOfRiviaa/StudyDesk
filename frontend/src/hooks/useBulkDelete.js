@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query"
-import { toast } from "@/components/ui/toast"
+import { toast } from "@/lib/toast"
 import { bulkDeleteItems, bulkDeleteTags, bulkErrorDescription } from "@/api/bulkApi"
 import { useUser } from "@/context/AuthContext"
 import { bulkDeleteFeedback } from "@/lib/bulkFeedback"

@@ -2,7 +2,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { UpdateNoteSchema } from "@/schemas";
 import { api } from "@/api/client";
-import { toast } from "@/components/ui/toast";
+import { toast } from "@/lib/toast";
 import { NoteFields } from "@/components/notes/NoteFields";
 import { ItemModalLayout } from "@/components/items/shared/ItemModalLayout";
 import { ItemModalHeader } from "@/components/items/shared/ItemModalHeader";

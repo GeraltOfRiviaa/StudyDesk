@@ -32,8 +32,6 @@ export async function fetchLibrary({
     if (q) params.set("q", q)
     if (match && (tags?.length > 0 || match === "none")) {
         params.set("match", match)
-    } if (match && (tags?.length > 0 || match === "none")) {
-        params.set("match", match)
     }
     if (cursor) params.set("cursor", cursor)
 

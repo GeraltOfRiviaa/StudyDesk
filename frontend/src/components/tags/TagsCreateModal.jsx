@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CreateTagSchema } from "@/schemas";
 import { api } from "@/api/client";
-import { toast } from "@/components/ui/toast";
+import { toast } from "@/lib/toast";
 import { TagFields } from "@/components/tags/TagsFields"
 import { useModalWork } from "@/hooks/useModalWork"
 

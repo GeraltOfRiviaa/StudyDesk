@@ -3,7 +3,7 @@ import { Navbar } from './components/Navbar'
 import { Toaster } from "@/components/ui/toast"
 import { useUser } from '@/context/AuthContext'
 import { ThemeProvider } from "@/providers/ThemeProvider"
-import { ItemModalProvider } from "@/context/ItemsModalContext"
+import { ItemModalProvider } from "@/providers/ItemModalProvider"
 import { Button } from "@/components/ui/button"
 
 const Layout = () => {
@@ -23,13 +23,13 @@ const Layout = () => {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <ItemModalProvider key={session.version}>
-      <div className="flex flex-col h-dvh gap-2 p-2 overflow-hidden">
-          <Navbar/>
-        <main className="flex-1 min-h-0">
-          <Outlet />
-        </main>
-        <Toaster />
-      </div>
+        <div className="flex flex-col h-dvh gap-2 p-2 overflow-hidden">
+          <Navbar />
+          <main className="flex-1 min-h-0">
+            <Outlet />
+          </main>
+          <Toaster />
+        </div>
       </ItemModalProvider>
     </ThemeProvider>
   )
