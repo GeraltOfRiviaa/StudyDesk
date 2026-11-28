@@ -1,5 +1,5 @@
 
-from pydantic import BaseModel, ConfigDict, Field, AwareDatetime, model_validator
+from pydantic import BaseModel, ConfigDict, Field, AwareDatetime
 from models.types import HexColor, PyObjectId, Tag, UpdateModel
 
 

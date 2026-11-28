@@ -69,6 +69,7 @@ class PaginationTests(unittest.IsolatedAsyncioTestCase):
         self.enterContext(patch("main.db", self.db))
         self.enterContext(patch.object(search, "db", self.db))
         self.enterContext(patch.object(tags, "tags_collection", self.db.tags))
+        self.enterContext(patch("routers.tags.tags_collection", self.db.tags))
         app = create_app()
 
         def test_user(request: Request):
@@ -107,6 +108,45 @@ class PaginationTests(unittest.IsolatedAsyncioTestCase):
         response = await self.client.get(path, params=params)
         self.assertEqual(response.status_code, 200, response.text)
         return response.json()
+
+    async def test_notes_array_pagination_exposes_headers_without_changing_body(self):
+        origin = {"Origin": "http://localhost:5173"}
+        first = await self.client.get("/notes/", params={"limit": 3}, headers=origin)
+        self.assertEqual(first.status_code, 200)
+        notes = first.json()
+        self.assertIsInstance(notes, list)
+        self.assertEqual(len(notes), 3)
+        self.assertEqual(first.headers["X-Has-More"], "true")
+        self.assertEqual(
+            {name.strip().lower() for name in first.headers["access-control-expose-headers"].split(",")},
+            {"x-has-more", "x-next-cursor", "retry-after"},
+        )
+        last = await self.client.get(
+            "/notes/", params={"limit": 3, "cursor": first.headers["X-Next-Cursor"]}, headers=origin,
+        )
+        self.assertEqual(last.status_code, 200)
+        self.assertEqual(last.headers["X-Has-More"], "false")
+        self.assertNotIn("X-Next-Cursor", last.headers)
+        self.assertEqual(len(last.json()), 3)
+        self.assertCountEqual(
+            [item["id"] for item in notes + last.json()],
+            [str(item["_id"]) for item in self.items if item["type"] == "note"],
+        )
+
+    async def test_tag_lookup_accepts_100_ids_and_preserves_owner_scope(self):
+        own_id = str(self.tag_rows[0]["_id"])
+        foreign = await self.db.tags.find_one({"user_id": OTHER})
+        origin = {"Origin": "http://localhost:5173"}
+        response = await self.client.post(
+            "/tags/lookup", json={"ids": [own_id.upper()] * 99 + [str(foreign["_id"])]}, headers=origin,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([tag["id"] for tag in response.json()], [own_id])
+        empty = await self.client.post("/tags/lookup", json={"ids": []}, headers=origin)
+        self.assertEqual((empty.status_code, empty.json()), (200, []))
+        for ids in ([own_id] * 101, ["invalid"]):
+            rejected = await self.client.post("/tags/lookup", json={"ids": ids}, headers=origin)
+            self.assertEqual(rejected.status_code, 422)
 
     async def walk(self, path, **params):
         result, seen_cursors = [], set()

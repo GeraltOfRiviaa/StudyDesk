@@ -11,7 +11,7 @@ This document transcribes the MongoDB database design diagram. It is a design re
 | `archive` | `files` |
 | `master_tags` | `tags` |
 
-The diagram's container types are `note`, `archive`, `calendar`, and `form`. Current item types are `note`, `file`, `event`, and `form`. Container types should be reconciled when containers are implemented. The sections below use current collection names where known.
+The diagram's container types are `note`, `archive`, `calendar`, and `form`. The current item and planned container models use `note`, `file`, `event`, and `form`. Users, notes, tags, and links have implemented API workflows. The remaining collections have baseline indexes for planned features.
 
 ## Collections
 
@@ -26,7 +26,7 @@ The diagram's container types are `note`, `archive`, `calendar`, and `form`. Cur
 | `created_at` | date | Creation date |
 | `updated_at` | date | Last update |
 
-The diagram predates Google-only authentication support; consult the current user model for authentication fields and nullability.
+Accounts use password authentication. Google sign-in handlers are deferred.
 
 ### notes
 
@@ -120,7 +120,7 @@ Separate collection; responses are not embedded in forms.
 | `_id` | ObjectId | Primary key |
 | `user_id` | ObjectId | References users |
 | `title` | string | Container title |
-| `type` | string | Diagram: note, archive, calendar, form |
+| `type` | string | Planned container item type: note, file, event, form |
 | `filter_tags` | ObjectId[] | References tags |
 | `layout` | object | Embedded layout |
 | `created_at` | date | Creation date |

@@ -1,9 +1,9 @@
 
-import { createContext, useCallback, useContext, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { ItemModalRenderer } from "@/components/items/ItemsModalRenderer"
 import { useUser } from "@/context/AuthContext"
 
-const ItemModalContext = createContext(null);
+import { ItemModalContext } from "@/context/ItemsModalContext"
 
 export function ItemModalProvider({ children }) {
     const [activeItem, setActiveItem] = useState(null);
@@ -22,10 +22,7 @@ export function ItemModalProvider({ children }) {
         };
     }, []);
 
-    // check whether we are trying to open the same note
-    // or it safe to go to another items modal
-    // if its not the same note and its safe to navigate
-    // then we set the active item to the new item 
+    // Reuse the current opening, and let the editor confirm before switching items.
     function openItem(type, id = null, action = "update") {
         if (session.signal.aborted) return;
         const current = activeScope.current?.item;
@@ -48,8 +45,6 @@ export function ItemModalProvider({ children }) {
         setActiveItem(item);
     }
 
-    // check whether we can safely navigate
-    // if yes then we set the active item to null
     function closeItem(expected) {
         // A callback from a previous opening cannot close the current modal.
         if (expected.signal.aborted || activeScope.current?.item !== expected) return;
@@ -68,16 +63,4 @@ export function ItemModalProvider({ children }) {
             <ItemModalRenderer />
         </ItemModalContext.Provider>
     );
-}
-
-export function useItemModal() {
-    const context = useContext(ItemModalContext);
-
-    if (!context) {
-        throw new Error(
-            "useItemModal must be used inside ItemModalProvider"
-        );
-    }
-
-    return context;
 }
